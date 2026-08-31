@@ -3,6 +3,7 @@ import { SubmissionSuccessModal } from "@/components/SubmissionSuccessModal"
 import { useToasts } from "@/components/Toast"
 import { PublicLayout } from "@/components/layout/PublicLayout"
 import { genAdhesionRef } from "@/lib/refs"
+import { readForm, submitWebForm } from "@/lib/submissions"
 
 const REGIONS = [
   "Dakar", "Thiès", "Saint-Louis", "Fatick", "Kaolack", "Ziguinchor", "Kolda", "Tambacounda",
@@ -22,13 +23,36 @@ export default function AdhesionPage() {
   const [legalForm, setLegalForm] = useState("Coopérative")
   const [refNum, setRefNum] = useState("CONESESS-2026-8942")
   const [successOpen, setSuccessOpen] = useState(false)
+  const [sending, setSending] = useState(false)
   const { showToast, ToastContainer } = useToasts()
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // TODO(Supabase): insert into `web_forms` (type: "Adhésion Membre") here
-    // instead of the original localStorage + crudcrud.com + formsubmit.co relay.
+    if (sending) return
+    setSending(true)
+    const f = readForm(e.currentTarget)
     const ref = genAdhesionRef()
+
+    const error = await submitWebForm({
+      reference: ref,
+      form_type: "Adhésion Membre",
+      org_name: f.org_name,
+      contact_name: f.contact_name,
+      email: f.email,
+      phone: f.phone,
+      region: f.region,
+      sector: f.sector,
+      legal_form: f.legal_form === "autre" ? f.legal_form_other : f.legal_form,
+      message: f.message,
+      details: { commune: f.commune, staff_count: f.staff_count, presentation: f.presentation },
+    })
+    setSending(false)
+
+    if (error) {
+      showToast(error)
+      return
+    }
+
     setRefNum(ref)
     setSubmitted(true)
     setSuccessOpen(true)
