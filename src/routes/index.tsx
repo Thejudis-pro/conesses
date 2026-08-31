@@ -13,11 +13,10 @@ import {
   Phone,
   Scale,
   Sprout,
-  Target,
   Users,
   Layers,
-  ShieldCheck,
   Network,
+
   GraduationCap,
   Facebook,
   Linkedin,
@@ -389,8 +388,8 @@ const HUBS = [
 ];
 
 function IanEss() {
-  const [actif, setActif] = useState(HUBS[0].id);
-  const hub = HUBS.find((h) => h.id === actif)!;
+  const [actif, setActif] = useState<string>(HUBS[0]!.id);
+  const hub = HUBS.find((h) => h.id === actif) ?? HUBS[0]!;
 
   return (
     <section id="ianess" className="section-pad" style={{ backgroundColor: "var(--sand)" }}>
