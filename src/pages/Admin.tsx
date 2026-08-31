@@ -1,7 +1,12 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import logo from "@/assets/images/logo.jpg"
 import { useToasts } from "@/components/Toast"
+import { ADHESION_TYPES, CANDIDATURE_TYPE, deleteWebForm, downloadCSV, fetchWebForms, updateWebFormStatus, webFormsToCSV } from "@/lib/adminData"
+import { useAdminAuth } from "@/lib/useAdminAuth"
+import type { Tables } from "@/integrations/supabase/types"
 import "@/styles/admin-legacy.css"
+
+type WebForm = Tables<"web_forms">
 
 type TabId =
   | "tab-dashboard"
@@ -12,7 +17,6 @@ type TabId =
   | "tab-badges"
   | "tab-checkin"
   | "tab-admins"
-  | "tab-settings"
 
 interface Member {
   ref: string
@@ -22,19 +26,6 @@ interface Member {
   phone: string
   badgeRole: string
 }
-
-interface AdminUser {
-  name: string
-  email: string
-  org: string
-  role: string
-}
-
-// Matches INITIAL_ADMIN_USERS in the original js/admin.js exactly.
-const INITIAL_ADMIN_USERS: AdminUser[] = [
-  { name: "Madior", email: "madior1991@gmail.com", org: "Présidence & Secrétariat Général Confédéral", role: "Super Administrateur Confédéral" },
-  { name: "Secrétariat Général CONESESS", email: "admin@conesess.sn", org: "Secrétariat Général Confédéral", role: "Administrateur Général" },
-]
 
 const REGIONS = [
   "Dakar", "Thiès", "Saint-Louis", "Diourbel", "Fatick", "Kaolack", "Kaffrine", "Louga",
@@ -58,7 +49,6 @@ const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "tab-badges", icon: "fas fa-id-badge", label: "Confection Badges CR80" },
   { id: "tab-checkin", icon: "fas fa-qrcode", label: "Scanner Émargement" },
   { id: "tab-admins", icon: "fas fa-user-shield", label: "Comptes Administrateurs" },
-  { id: "tab-settings", icon: "fas fa-cloud", label: "Relais Cloud & API" },
 ]
 
 const EmptyRow = ({ colSpan, children }: { colSpan: number; children: React.ReactNode }) => (
@@ -69,25 +59,121 @@ const EmptyRow = ({ colSpan, children }: { colSpan: number; children: React.Reac
   </tr>
 )
 
+const STATUS_BADGE_CLASS = (status: string) => (status === "Approuvé" ? "badge-green" : status === "Rejeté" ? "badge-navy" : "badge-gold")
+
+function ActionButtons({
+  row,
+  onApprove,
+  onReject,
+  onDelete,
+}: {
+  row: WebForm
+  onApprove: () => void
+  onReject: () => void
+  onDelete: () => void
+}) {
+  return (
+    <div className="btn-group-actions">
+      <button onClick={onApprove} className="btn-act btn-act-approve" title="Accepter et Valider">
+        <i className="fas fa-check" /> Accepter
+      </button>
+      <button onClick={onReject} className="btn-act btn-act-reject" title="Rejeter la Demande">
+        <i className="fas fa-times" /> Rejeter
+      </button>
+      {row.email && (
+        <a
+          className="btn-act btn-act-email"
+          title="Envoyer un E-mail"
+          href={`mailto:${row.email}?subject=${encodeURIComponent(`CONESESS - Suivi de votre Dossier ${row.reference}`)}&body=${encodeURIComponent(
+            `Bonjour ${row.contact_name ?? ""},\n\nNous avons bien reçu votre formulaire pour "${row.org_name ?? row.contact_name ?? ""}". Votre dossier (Réf: ${row.reference}) est en cours de traitement par le Secrétariat Général Confédéral.\n\nCordialement,\nLe CONESESS Sénégal`,
+          )}`}
+        >
+          <i className="fas fa-envelope" /> Mail
+        </a>
+      )}
+      {row.phone && (
+        <a
+          className="btn-act btn-act-wa"
+          title="Envoyer sur WhatsApp"
+          href={`https://wa.me/${row.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+            `Bonjour ${row.contact_name ?? ""}, le CONESESS a bien reçu votre dossier (${row.reference}) pour "${row.org_name ?? row.contact_name ?? ""}".`,
+          )}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <i className="fab fa-whatsapp" /> WhatsApp
+        </a>
+      )}
+      <button onClick={onDelete} className="btn-act btn-act-delete" title="Supprimer Définitivement">
+        <i className="fas fa-trash-alt" /> Supprimer
+      </button>
+    </div>
+  )
+}
+
+function AdminLoginGate({ authError, onSignIn, loading }: { authError: string | null; onSignIn: (email: string, password: string) => void; loading: boolean }) {
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+
+  return (
+    <div className="admin-app-body" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "1rem" }}>
+      <div style={{ background: "var(--admin-card-bg-light)", borderRadius: "20px", padding: "2.5rem", maxWidth: "440px", width: "100%", boxShadow: "0 20px 50px rgba(0,0,0,0.15)" }}>
+        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+          <img src={logo} alt="Logo CONESESS" style={{ width: "60px", height: "60px", borderRadius: "50%", border: "3px solid var(--admin-green)", marginBottom: "0.75rem" }} />
+          <h3 style={{ margin: 0, color: "var(--admin-text-main)", fontSize: "1.3rem" }}>Espace Administrateur</h3>
+          <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Connexion réservée aux comptes habilités</p>
+        </div>
+
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            onSignIn(email, password)
+          }}
+        >
+          <div className="wizard-form-group mb-3">
+            <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>E-mail Administrateur</label>
+            <input type="email" className="wizard-form-control" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ height: "42px" }} />
+          </div>
+          <div className="wizard-form-group mb-3">
+            <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>Mot de Passe</label>
+            <input type="password" className="wizard-form-control" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ height: "42px" }} />
+          </div>
+
+          {authError && (
+            <p style={{ color: "#DC2626", fontSize: "0.825rem", fontWeight: 600, marginBottom: "1rem" }}>
+              {authError === "not-admin" ? "Ce compte n'a pas le rôle administrateur." : "Identifiants invalides."}
+            </p>
+          )}
+
+          <button type="submit" disabled={loading} className="action-btn-primary" style={{ width: "100%", justifyContent: "center", background: "var(--admin-green)", padding: "0.75rem" }}>
+            {loading ? "Connexion..." : "Se connecter"}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPage() {
+  const { loading: authLoading, session, isAdmin, authError: rawAuthError, signIn, signOut } = useAdminAuth()
+  const [loginError, setLoginError] = useState<string | null>(null)
+
   const [activeTab, setActiveTab] = useState<TabId>("tab-dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [theme, setTheme] = useState<"light" | "dark">("light")
   const { showToast, ToastContainer } = useToasts()
 
-  const [loginModalOpen, setLoginModalOpen] = useState(false)
   const [addMemberOpen, setAddMemberOpen] = useState(false)
-  const [addAdminOpen, setAddAdminOpen] = useState(false)
 
-  // TODO(Supabase): these three lists should come from `web_forms` /
-  // `organizations` / `admin_users` tables. They start empty/seeded here
-  // exactly like the original did on a fresh `localStorage` (see
-  // `initAdminData()` in the old js/admin.js), since the public forms no
-  // longer write to a fake localStorage "database" (see the TODOs in
-  // Adhesion.tsx / Candidature.tsx).
-  const [webForms] = useState<unknown[]>([])
+  const [webForms, setWebForms] = useState<WebForm[]>([])
+  const [webFormsLoading, setWebFormsLoading] = useState(false)
+  const [webFormsError, setWebFormsError] = useState<string | null>(null)
+
+  // TODO(Supabase): "Entreprises ESS" / badge studio / check-in still use
+  // this local-only list — no `organizations`/`members` table exists yet.
+  // Only the 4 tabs explicitly requested (dashboard, réception formulaires,
+  // adhésions, comité de pilotage) are wired to the real `web_forms` table.
   const [members, setMembers] = useState<Member[]>([])
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>(INITIAL_ADMIN_USERS)
 
   const [badgeName, setBadgeName] = useState("")
   const [badgeOrg, setBadgeOrg] = useState("")
@@ -96,6 +182,54 @@ export default function AdminPage() {
   const [checkinCode, setCheckinCode] = useState("")
   const [checkinResult, setCheckinResult] = useState<"valid" | "invalid" | null>(null)
   const [checkinMatch, setCheckinMatch] = useState<Member | null>(null)
+
+  const loadWebForms = async () => {
+    setWebFormsLoading(true)
+    const { data, error } = await fetchWebForms()
+    setWebFormsLoading(false)
+    if (error) {
+      setWebFormsError(error)
+      return
+    }
+    setWebFormsError(null)
+    setWebForms(data)
+  }
+
+  useEffect(() => {
+    if (session && isAdmin) loadWebForms()
+  }, [session, isAdmin])
+
+  const handleSignIn = async (email: string, password: string) => {
+    setLoginError(null)
+    const err = await signIn(email, password)
+    if (err) setLoginError(err)
+  }
+
+  const handleApprove = async (row: WebForm) => {
+    const err = await updateWebFormStatus(row.id, "Approuvé")
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast(`✅ Dossier ${row.contact_name ?? row.reference} accepté.`)
+    loadWebForms()
+  }
+
+  const handleReject = async (row: WebForm) => {
+    const err = await updateWebFormStatus(row.id, "Rejeté")
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast(`❌ Dossier ${row.contact_name ?? row.reference} rejeté.`)
+    loadWebForms()
+  }
+
+  const handleDelete = async (row: WebForm) => {
+    if (!window.confirm("⚠️ Souhaitez-vous supprimer définitivement ce formulaire de la base de données ?")) return
+    const err = await deleteWebForm(row.id)
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast("🗑️ Soumission supprimée de la plateforme.")
+    loadWebForms()
+  }
+
+  const handleExportCSV = () => {
+    downloadCSV(webFormsToCSV(webForms), `CONESESS_Formulaires_Web_${new Date().toISOString().slice(0, 10)}.csv`)
+  }
 
   const switchTab = (id: TabId) => {
     setActiveTab(id)
@@ -111,47 +245,53 @@ export default function AdminPage() {
     const region = (form.elements.namedItem("manual-region") as HTMLSelectElement).value
     const phone = (form.elements.namedItem("manual-phone") as HTMLInputElement).value.trim()
     if (!name || !phone) return
-
-    // TODO(Supabase): insert into `organizations` instead of local state.
     setMembers((prev) => [...prev, { ref: `CONESESS-2026-${Math.floor(1000 + Math.random() * 9000)}`, name, type, region, phone, badgeRole: "Membre Titulaire" }])
     setAddMemberOpen(false)
     showToast(`Membre ${name} ajouté au registre !`)
   }
 
-  const handleAddAdmin = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const form = e.currentTarget
-    const name = (form.elements.namedItem("new-admin-name") as HTMLInputElement).value.trim()
-    const email = (form.elements.namedItem("new-admin-email") as HTMLInputElement).value.trim().toLowerCase()
-    const role = (form.elements.namedItem("new-admin-role") as HTMLSelectElement).value
-
-    // TODO(Supabase): insert into an `admin_users` table (with proper auth)
-    // instead of local state.
-    setAdminUsers((prev) => [...prev, { name, email, org: "CONESESS Sénégal", role }])
-    setAddAdminOpen(false)
-    showToast(`Compte administrateur créé pour ${name} !`)
-  }
-
   const handleCheckin = () => {
     const code = checkinCode.trim()
     if (!code) return
-    // TODO(Supabase): look up the code against `organizations` / `web_forms`.
     const match = members.find((m) => m.ref === code) ?? null
     setCheckinMatch(match)
     setCheckinResult(match ? "valid" : "invalid")
   }
 
-  return (
-    <div className={`admin-app-body`} data-admin-theme={theme}>
-      <div className="admin-app-wrapper">
-        {sidebarOpen && (
-          <div
-            style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1040 }}
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+  // --- Auth gate ---
+  if (authLoading) {
+    return (
+      <div className="admin-app-body" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh" }}>
+        <p style={{ color: "var(--admin-text-muted)" }}>Chargement...</p>
+      </div>
+    )
+  }
 
-        {/* SIDEBAR RAIL */}
+  if (!session) {
+    return <AdminLoginGate authError={loginError} loading={authLoading} onSignIn={handleSignIn} />
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="admin-app-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: "1rem", padding: "1rem" }}>
+        <i className="fas fa-lock" style={{ fontSize: "2.5rem", color: "var(--admin-red)" }} />
+        <p style={{ color: "var(--admin-text-main)", fontWeight: 700 }}>Ce compte n'a pas le rôle administrateur.</p>
+        <button onClick={signOut} className="action-btn-pill">
+          Se déconnecter
+        </button>
+      </div>
+    )
+  }
+
+  const adhesionForms = webForms.filter((w) => ADHESION_TYPES.includes(w.form_type))
+  const steeringForms = webForms.filter((w) => w.form_type === CANDIDATURE_TYPE)
+  const regionsCount = new Set(webForms.map((w) => w.region).filter(Boolean)).size
+
+  return (
+    <div className="admin-app-body" data-admin-theme={theme}>
+      <div className="admin-app-wrapper">
+        {sidebarOpen && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1040 }} onClick={() => setSidebarOpen(false)} />}
+
         <aside className={`admin-sidebar${sidebarOpen ? " active" : ""}`}>
           <div className="admin-brand-header">
             <img src={logo} alt="Logo CONESESS" className="admin-brand-logo" />
@@ -184,7 +324,7 @@ export default function AdminPage() {
             ))}
 
             <div className="admin-nav-section-title">PARAMÈTRES & ACCÈS</div>
-            {NAV_ITEMS.slice(7, 9).map((item) => (
+            {NAV_ITEMS.slice(7, 8).map((item) => (
               <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
                 <i className={item.icon} /> <span>{item.label}</span>
               </a>
@@ -193,22 +333,15 @@ export default function AdminPage() {
 
           <div className="admin-sidebar-footer">
             <button
-              onClick={() => {
-                if (window.confirm("⚠️ Confirmez-vous la réinitialisation complète de la mémoire de l'Espace Admin ?\n\nCette action effacera le cache et remettra la plateforme à neuf pour recevoir les vraies données.")) {
-                  setMembers([])
-                  setAdminUsers(INITIAL_ADMIN_USERS)
-                  showToast("Mémoire administrateur réinitialisée avec succès !")
-                }
-              }}
+              onClick={signOut}
               className="action-btn-pill"
               style={{ width: "100%", justifyContent: "center", background: "rgba(220, 38, 38, 0.2)", color: "#FCA5A5", border: "1px solid #DC2626", fontSize: "0.75rem" }}
             >
-              <i className="fas fa-trash-alt" /> Effacer Mémoire Admin
+              <i className="fas fa-sign-out-alt" /> Se déconnecter
             </button>
           </div>
         </aside>
 
-        {/* MAIN VIEWPORT */}
         <main className="admin-viewport">
           <header className="admin-top-bar">
             <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -217,30 +350,25 @@ export default function AdminPage() {
               </button>
               <div>
                 <h1 style={{ margin: 0, fontSize: "1.35rem", color: "var(--admin-text-main)", fontWeight: 800 }}>Espace Administrateur CONESESS</h1>
-                <small style={{ color: "var(--admin-text-muted)", fontWeight: 600 }}>Vision Sénégal 2050 | Formulaires Web Synchronisés</small>
+                <small style={{ color: "var(--admin-text-muted)", fontWeight: 600 }}>Connecté : {session.user.email}</small>
               </div>
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
-              <button onClick={() => setLoginModalOpen(true)} className="action-btn-primary" style={{ background: "var(--admin-navy)", color: "#FFFFFF", fontSize: "0.8rem", border: "none", padding: "0.55rem 0.9rem" }}>
-                <i className="fas fa-user-lock" /> Session (Madior)
-              </button>
-              <button
-                onClick={() => showToast("Flux d'administration réactualisé !")}
-                className="action-btn-primary"
-                style={{ background: "var(--admin-green)", color: "#FFFFFF", fontSize: "0.8rem", border: "none", padding: "0.55rem 0.9rem" }}
-              >
+              <button onClick={loadWebForms} className="action-btn-primary" style={{ background: "var(--admin-green)", color: "#FFFFFF", fontSize: "0.8rem", border: "none", padding: "0.55rem 0.9rem" }}>
                 <i className="fas fa-sync-alt" /> Actualiser Flux
               </button>
-              <button
-                onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-                className="action-btn-pill"
-                style={{ fontSize: "0.8rem", border: "1px solid var(--admin-border-light)" }}
-              >
+              <button onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} className="action-btn-pill" style={{ fontSize: "0.8rem", border: "1px solid var(--admin-border-light)" }}>
                 <i className="fas fa-adjust" /> Thème
               </button>
             </div>
           </header>
+
+          {webFormsError && (
+            <div style={{ background: "var(--admin-soft-red)", border: "1px solid var(--admin-red)", color: "var(--admin-red)", padding: "1rem 1.25rem", borderRadius: "12px", marginBottom: "1.5rem" }}>
+              Erreur de chargement des formulaires : {webFormsError}
+            </div>
+          )}
 
           {/* TAB 1: DASHBOARD */}
           {activeTab === "tab-dashboard" && (
@@ -255,19 +383,19 @@ export default function AdminPage() {
                   </div>
                   <div className="metric-value-huge">{webForms.length}</div>
                   <small style={{ color: "var(--admin-green)", fontWeight: 700 }}>
-                    <i className="fas fa-arrow-up" /> En direct du site web
+                    <i className="fas fa-arrow-up" /> En direct de Supabase
                   </small>
                 </div>
 
                 <div className="metric-card-pro">
                   <div className="metric-header">
-                    <span className="metric-subtext">Adhésions Confirmées</span>
+                    <span className="metric-subtext">Adhésions Reçues</span>
                     <div className="metric-icon-wrap" style={{ background: "var(--admin-soft-gold)", color: "var(--admin-gold)" }}>
                       <i className="fas fa-building" />
                     </div>
                   </div>
-                  <div className="metric-value-huge">{members.length}</div>
-                  <small style={{ color: "var(--admin-text-muted)", fontWeight: 600 }}>Entreprises ESS enregistrées</small>
+                  <div className="metric-value-huge">{adhesionForms.length}</div>
+                  <small style={{ color: "var(--admin-text-muted)", fontWeight: 600 }}>Formulaires d'adhésion / intérêt</small>
                 </div>
 
                 <div className="metric-card-pro">
@@ -277,7 +405,7 @@ export default function AdminPage() {
                       <i className="fas fa-users-cog" />
                     </div>
                   </div>
-                  <div className="metric-value-huge">0</div>
+                  <div className="metric-value-huge">{steeringForms.length}</div>
                   <small style={{ color: "var(--admin-navy)", fontWeight: 700 }}>Comité de Pilotage FES-ESS</small>
                 </div>
 
@@ -288,7 +416,7 @@ export default function AdminPage() {
                       <i className="fas fa-map-marked-alt" />
                     </div>
                   </div>
-                  <div className="metric-value-huge">{new Set(members.map((m) => m.region)).size} / 14</div>
+                  <div className="metric-value-huge">{regionsCount} / 14</div>
                   <small style={{ color: "var(--admin-text-muted)", fontWeight: 600 }}>Couverture Nationale Sénégal</small>
                 </div>
               </div>
@@ -299,9 +427,7 @@ export default function AdminPage() {
                     <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
                       <i className="fas fa-stream" style={{ color: "var(--admin-green)" }} /> Flux des Soumissions en Temps Réel
                     </h3>
-                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Formulaires transmis en direct depuis le site web public.
-                    </p>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Formulaires transmis en direct depuis le site web public.</p>
                   </div>
                   <button onClick={() => switchTab("tab-web-forms")} className="action-btn-pill" style={{ fontSize: "0.8rem" }}>
                     Voir Tous les Dossiers
@@ -321,7 +447,39 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      <EmptyRow colSpan={6}>Aucune nouvelle soumission enregistrée pour le moment.</EmptyRow>
+                      {webFormsLoading ? (
+                        <EmptyRow colSpan={6}>Chargement...</EmptyRow>
+                      ) : webForms.length === 0 ? (
+                        <EmptyRow colSpan={6}>Aucune nouvelle soumission enregistrée pour le moment.</EmptyRow>
+                      ) : (
+                        webForms.slice(0, 8).map((wf) => (
+                          <tr key={wf.id}>
+                            <td>
+                              <strong style={{ color: "var(--admin-green)", display: "block" }}>{wf.reference}</strong>
+                              <small style={{ color: "var(--admin-text-muted)" }}>{new Date(wf.created_at).toLocaleDateString("fr-FR")}</small>
+                            </td>
+                            <td>
+                              <span className={`badge ${wf.form_type === CANDIDATURE_TYPE ? "badge-gold" : "badge-green"}`}>{wf.form_type}</span>
+                            </td>
+                            <td>
+                              <strong>{wf.contact_name}</strong>
+                              <br />
+                              <small style={{ color: "var(--admin-text-muted)" }}>{wf.org_name ?? "Entreprise ESS"}</small>
+                            </td>
+                            <td>
+                              {wf.phone}
+                              <br />
+                              <small style={{ color: "var(--admin-text-muted)" }}>{wf.email ?? ""}</small>
+                            </td>
+                            <td>
+                              <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
+                            </td>
+                            <td>
+                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -338,16 +496,10 @@ export default function AdminPage() {
                     <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
                       <i className="fas fa-inbox" style={{ color: "var(--admin-green)" }} /> Réception Globale des Formulaires Web
                     </h3>
-                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Traitement complet : validation, rejet, suppression, export PDF, e-mail & WhatsApp.
-                    </p>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Traitement complet : validation, rejet, suppression, export CSV, e-mail & WhatsApp.</p>
                   </div>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button
-                      onClick={() => showToast("TODO(Supabase) : export CSV à brancher sur les données réelles.")}
-                      className="action-btn-primary"
-                      style={{ fontSize: "0.8rem", background: "var(--admin-navy)" }}
-                    >
+                    <button onClick={handleExportCSV} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-navy)" }}>
                       <i className="fas fa-file-excel" /> Exporter CSV
                     </button>
                   </div>
@@ -367,7 +519,37 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      <EmptyRow colSpan={7}>Aucune donnée de formulaire disponible.</EmptyRow>
+                      {webFormsLoading ? (
+                        <EmptyRow colSpan={7}>Chargement...</EmptyRow>
+                      ) : webForms.length === 0 ? (
+                        <EmptyRow colSpan={7}>Aucune donnée de formulaire disponible.</EmptyRow>
+                      ) : (
+                        webForms.map((wf) => (
+                          <tr key={wf.id}>
+                            <td>
+                              <strong>{wf.reference}</strong>
+                            </td>
+                            <td>{new Date(wf.created_at).toLocaleString("fr-FR")}</td>
+                            <td>
+                              <span className="badge badge-navy">{wf.form_type}</span>
+                            </td>
+                            <td>
+                              <strong>{wf.contact_name}</strong> ({wf.org_name ?? "Structure ESS"})
+                            </td>
+                            <td>
+                              {wf.phone}
+                              <br />
+                              <small style={{ color: "var(--admin-text-muted)" }}>{wf.email ?? ""}</small>
+                            </td>
+                            <td>
+                              <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
+                            </td>
+                            <td>
+                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -384,13 +566,8 @@ export default function AdminPage() {
                     <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
                       <i className="fas fa-id-card" style={{ color: "var(--admin-green)" }} /> Registre des Adhésions Membres
                     </h3>
-                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Liste des organisations ayant validé leur adhésion au CONESESS.
-                    </p>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Demandes d'adhésion et manifestations d'intérêt reçues via le site web.</p>
                   </div>
-                  <button onClick={() => setAddMemberOpen(true)} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-green)" }}>
-                    <i className="fas fa-plus" /> Ajouter Manuellement
-                  </button>
                 </div>
 
                 <div className="admin-table-container">
@@ -402,39 +579,32 @@ export default function AdminPage() {
                         <th>Forme Juridique</th>
                         <th>Région</th>
                         <th>Représentant Légal</th>
-                        <th>Niveau Badge</th>
+                        <th>Statut</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {members.length === 0 ? (
-                        <EmptyRow colSpan={7}>Aucun membre enregistré dans le registre.</EmptyRow>
+                      {webFormsLoading ? (
+                        <EmptyRow colSpan={7}>Chargement...</EmptyRow>
+                      ) : adhesionForms.length === 0 ? (
+                        <EmptyRow colSpan={7}>Aucune demande d'adhésion enregistrée.</EmptyRow>
                       ) : (
-                        members.map((m) => (
-                          <tr key={m.ref}>
+                        adhesionForms.map((wf) => (
+                          <tr key={wf.id}>
                             <td>
-                              <strong style={{ color: "var(--admin-green)" }}>{m.ref}</strong>
+                              <strong style={{ color: "var(--admin-green)" }}>{wf.reference}</strong>
                             </td>
                             <td>
-                              <strong>{m.name}</strong>
+                              <strong>{wf.org_name}</strong>
                             </td>
-                            <td>{m.type}</td>
-                            <td>{m.region}</td>
-                            <td>{m.name}</td>
+                            <td>{wf.legal_form}</td>
+                            <td>{wf.region}</td>
+                            <td>{wf.contact_name}</td>
                             <td>
-                              <span className="badge badge-green">{m.badgeRole}</span>
+                              <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
                             </td>
                             <td>
-                              <button
-                                onClick={() => {
-                                  setBadgeName(m.name)
-                                  setBadgeOrg(m.type)
-                                  switchTab("tab-badges")
-                                }}
-                                className="btn-act btn-act-view"
-                              >
-                                <i className="fas fa-id-badge" /> Badge CR80
-                              </button>
+                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
                             </td>
                           </tr>
                         ))
@@ -455,9 +625,7 @@ export default function AdminPage() {
                     <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
                       <i className="fas fa-users-cog" style={{ color: "var(--admin-green)" }} /> Candidatures Comité de Pilotage
                     </h3>
-                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Candidats inscrits pour le Comité de Pilotage du FES-ESS 2026.
-                    </p>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Candidats inscrits pour le Comité de Pilotage du FES-ESS 2026.</p>
                   </div>
                 </div>
 
@@ -468,14 +636,38 @@ export default function AdminPage() {
                         <th>Date</th>
                         <th>Candidat</th>
                         <th>Organisation</th>
-                        <th>Pôle Souhaité</th>
+                        <th>Poste Souhaité</th>
                         <th>Région</th>
                         <th>Statut</th>
                         <th>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <EmptyRow colSpan={7}>Aucune candidature pour le comité de pilotage.</EmptyRow>
+                      {webFormsLoading ? (
+                        <EmptyRow colSpan={7}>Chargement...</EmptyRow>
+                      ) : steeringForms.length === 0 ? (
+                        <EmptyRow colSpan={7}>Aucune candidature pour le comité de pilotage.</EmptyRow>
+                      ) : (
+                        steeringForms.map((wf) => (
+                          <tr key={wf.id}>
+                            <td>{new Date(wf.created_at).toLocaleDateString("fr-FR")}</td>
+                            <td>
+                              <strong>{wf.contact_name}</strong>
+                            </td>
+                            <td>{wf.org_name}</td>
+                            <td>
+                              <span className="badge badge-gold">{wf.role_wanted}</span>
+                            </td>
+                            <td>{wf.region}</td>
+                            <td>
+                              <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
+                            </td>
+                            <td>
+                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -492,10 +684,11 @@ export default function AdminPage() {
                     <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
                       <i className="fas fa-building" style={{ color: "var(--admin-green)" }} /> Annuaire Général des Entreprises ESS
                     </h3>
-                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Base consolidée des coopératives, mutuelles et entreprises de l'ESS au Sénégal.
-                    </p>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Base consolidée des coopératives, mutuelles et entreprises de l'ESS au Sénégal.</p>
                   </div>
+                  <button onClick={() => setAddMemberOpen(true)} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-green)" }}>
+                    <i className="fas fa-plus" /> Ajouter Manuellement
+                  </button>
                 </div>
 
                 <div className="admin-table-container">
@@ -575,13 +768,7 @@ export default function AdminPage() {
 
                   <div className="wizard-form-group mb-3">
                     <label style={{ fontWeight: 600, fontSize: "0.825rem" }}>Organisation / Structure *</label>
-                    <input
-                      type="text"
-                      className="wizard-form-control"
-                      placeholder="ex: Coopérative Agricole de Saint-Louis"
-                      value={badgeOrg}
-                      onChange={(e) => setBadgeOrg(e.target.value)}
-                    />
+                    <input type="text" className="wizard-form-control" placeholder="ex: Coopérative Agricole de Saint-Louis" value={badgeOrg} onChange={(e) => setBadgeOrg(e.target.value)} />
                   </div>
 
                   <div className="wizard-form-group mb-4">
@@ -648,11 +835,7 @@ export default function AdminPage() {
                     </div>
 
                     <div style={{ background: "#FFFFFF", padding: "0.35rem", borderRadius: "8px" }}>
-                      <img
-                        src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=CONESESS-DEMO"
-                        alt="QR Code"
-                        style={{ width: "70px", height: "70px", display: "block" }}
-                      />
+                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=CONESESS-DEMO" alt="QR Code" style={{ width: "70px", height: "70px", display: "block" }} />
                     </div>
                   </div>
                 </div>
@@ -727,133 +910,16 @@ export default function AdminPage() {
                       <i className="fas fa-user-shield" style={{ color: "var(--admin-green)" }} /> Gestion des Administrateurs
                     </h3>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Comptes d'accès habilités sur la plateforme d'administration.
+                      Session active : <strong>{session.user.email}</strong>. La création de nouveaux comptes administrateurs se fait actuellement via Supabase (Auth + table{" "}
+                      <code>user_roles</code>).
                     </p>
                   </div>
-                  <button onClick={() => setAddAdminOpen(true)} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-navy)" }}>
-                    <i className="fas fa-user-plus" /> Créer Compte Admin
-                  </button>
                 </div>
-
-                <div className="admin-table-container">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Nom & Titulaire</th>
-                        <th>Identifiant / E-mail</th>
-                        <th>Mot de Passe</th>
-                        <th>Service / Antenne</th>
-                        <th>Rôle</th>
-                        <th>Statut</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {adminUsers.map((a) => (
-                        <tr key={a.email}>
-                          <td>
-                            <strong>{a.name}</strong>
-                          </td>
-                          <td>{a.email}</td>
-                          <td>
-                            <span style={{ fontFamily: "monospace" }}>••••••••</span>
-                          </td>
-                          <td>{a.org}</td>
-                          <td>
-                            <span className="badge badge-navy">{a.role}</span>
-                          </td>
-                          <td>
-                            <span className="badge badge-green">Actif</span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* TAB 9: SETTINGS & RELAIS CLOUD */}
-          {activeTab === "tab-settings" && (
-            <section className="admin-tab-content">
-              <div className="admin-table-card" style={{ maxWidth: "650px" }}>
-                <h3 style={{ margin: "0 0 1rem 0", fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
-                  <i className="fas fa-cloud" style={{ color: "var(--admin-green)" }} /> Configuration Relais Cloud Inter-Appareils
-                </h3>
-                <p style={{ fontSize: "0.825rem", color: "var(--admin-text-muted)" }} className="mb-4">
-                  {/* TODO(Supabase): this whole panel (a raw crudcrud.com relay key)
-                      should be removed once Supabase is wired up as the real backend. */}
-                  Clé d'API relais utilisée pour la synchronisation automatique en temps réel entre votre téléphone et votre
-                  ordinateur.
-                </p>
-
-                <div className="wizard-form-group mb-3">
-                  <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>Endpoint Relais Cloud Actif *</label>
-                  <input
-                    type="text"
-                    className="wizard-form-control"
-                    defaultValue="https://crudcrud.com/api/8484295837b1490394750b39c131212e/submissions"
-                    style={{ height: "38px", fontSize: "0.825rem" }}
-                  />
-                </div>
-
-                <button
-                  onClick={() => showToast("Endpoint de synchronisation cloud mis à jour !")}
-                  className="action-btn-primary"
-                  style={{ background: "var(--admin-navy)", fontSize: "0.825rem" }}
-                >
-                  <i className="fas fa-key" /> Enregistrer Clé API
-                </button>
               </div>
             </section>
           )}
         </main>
       </div>
-
-      {/* MODAL: CONNEXION & GESTION DE SESSION ADMIN */}
-      {loginModalOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 1060, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
-          <div style={{ background: "var(--admin-card-bg-light)", borderRadius: "20px", padding: "2rem", maxWidth: "440px", width: "100%" }}>
-            <div style={{ textAlign: "center", marginBottom: "1.25rem" }}>
-              <img src={logo} alt="Logo CONESESS" style={{ width: "60px", height: "60px", borderRadius: "50%", border: "3px solid var(--admin-green)", marginBottom: "0.5rem" }} />
-              <h3 style={{ margin: 0, color: "var(--admin-text-main)", fontSize: "1.3rem" }}>Session Administrateur</h3>
-              <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Authentification Super Admin Confédéral</p>
-            </div>
-
-            <div style={{ background: "var(--admin-soft-green)", border: "1px solid var(--admin-green)", padding: "1rem", borderRadius: "12px", marginBottom: "1.25rem" }}>
-              <small style={{ color: "var(--admin-green)", fontWeight: 800, display: "block", textTransform: "uppercase" }}>Session Active</small>
-              <strong style={{ color: "var(--admin-text-main)", fontSize: "0.95rem", display: "block" }}>Madior (Super Administrateur)</strong>
-              <span style={{ fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>madior1991@gmail.com</span>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                // TODO(Supabase): real auth check against Supabase Auth.
-                showToast("Session Madior (Super Administrateur) confirmée !")
-                setLoginModalOpen(false)
-              }}
-            >
-              <div className="wizard-form-group mb-3">
-                <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>E-mail Administrateur</label>
-                <input type="email" className="wizard-form-control" defaultValue="madior1991@gmail.com" required style={{ height: "38px" }} />
-              </div>
-              <div className="wizard-form-group mb-4">
-                <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>Mot de Passe</label>
-                <input type="password" className="wizard-form-control" defaultValue="admin" required style={{ height: "38px" }} />
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button type="submit" className="action-btn-primary" style={{ flex: 1, justifyContent: "center", background: "var(--admin-green)" }}>
-                  Connexion
-                </button>
-                <button type="button" onClick={() => setLoginModalOpen(false)} className="action-btn-pill">
-                  Fermer
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* MODAL: MANUALLY ADD MEMBER */}
       {addMemberOpen && (
@@ -892,45 +958,6 @@ export default function AdminPage() {
                   Enregistrer
                 </button>
                 <button type="button" onClick={() => setAddMemberOpen(false)} className="action-btn-pill">
-                  Annuler
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: ADD ADMIN ACCOUNT */}
-      {addAdminOpen && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1060, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ background: "var(--admin-card-bg-light)", borderRadius: "20px", padding: "2rem", maxWidth: "480px", width: "90%" }}>
-            <h3 style={{ margin: "0 0 1rem 0", color: "var(--admin-text-main)" }}>Créer un Compte Administrateur</h3>
-            <form onSubmit={handleAddAdmin}>
-              <div className="wizard-form-group mb-2">
-                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Nom & Prénom *</label>
-                <input type="text" name="new-admin-name" className="wizard-form-control" required placeholder="ex: Fatou Diop" />
-              </div>
-              <div className="wizard-form-group mb-2">
-                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>E-mail *</label>
-                <input type="email" name="new-admin-email" className="wizard-form-control" required placeholder="fatou@conesess.sn" />
-              </div>
-              <div className="wizard-form-group mb-2">
-                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Mot de Passe *</label>
-                <input type="password" name="new-admin-pass" className="wizard-form-control" required defaultValue="admin123" />
-              </div>
-              <div className="wizard-form-group mb-3">
-                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Rôle & Accès *</label>
-                <select name="new-admin-role" className="wizard-form-control" required defaultValue="Super Administrateur Confédéral">
-                  <option>Super Administrateur Confédéral</option>
-                  <option>Administrateur Général</option>
-                  <option>Opérateur Studio Badges & Émargement</option>
-                </select>
-              </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button type="submit" className="action-btn-primary" style={{ flex: 1, justifyContent: "center", background: "var(--admin-navy)" }}>
-                  Créer Compte
-                </button>
-                <button type="button" onClick={() => setAddAdminOpen(false)} className="action-btn-pill">
                   Annuler
                 </button>
               </div>
