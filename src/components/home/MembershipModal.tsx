@@ -1,6 +1,7 @@
 import { useState } from "react"
 import logo from "@/assets/images/logo.jpg"
 import { genAdhesionRef } from "@/lib/refs"
+import { readForm, submitWebForm } from "@/lib/submissions"
 
 const REGIONS = [
   "Dakar", "Thiès", "Saint-Louis", "Fatick", "Kaolack", "Ziguinchor", "Kolda", "Tambacounda",
@@ -32,12 +33,39 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
   const [legalForm, setLegalForm] = useState("Coopérative")
   const [otherLegalForm, setOtherLegalForm] = useState("")
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const [sending, setSending] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // TODO(Supabase): insert into `web_forms` / `organizations` here instead
-    // of the original localStorage + crudcrud.com + formsubmit.co relay.
+    if (sending) return
+    setSending(true)
+    setErrorMsg(null)
+    const form = e.currentTarget
+    const f = readForm(form)
     const ref = genAdhesionRef()
-    e.currentTarget.reset()
+
+    const error = await submitWebForm({
+      reference: ref,
+      form_type: "Manifestation d'intérêt",
+      org_name: f.org_name,
+      contact_name: f.contact_name,
+      email: f.email,
+      phone: f.phone,
+      region: f.region,
+      sector: f.sector,
+      legal_form: f.legal_form === "autre" ? f.legal_form_other : f.legal_form,
+      message: f.message,
+      details: { commune: f.commune, staff_count: f.staff_count, presentation: f.presentation },
+    })
+    setSending(false)
+
+    if (error) {
+      setErrorMsg(error)
+      return
+    }
+
+    form.reset()
     setLegalForm("Coopérative")
     setOtherLegalForm("")
     onClose()
@@ -69,12 +97,12 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem", marginBottom: "0.85rem" }}>
             <div className="wizard-form-group">
               <label>Dénomination de l’organisation *</label>
-              <input type="text" className="wizard-form-control" required placeholder="ex: Coopérative Agricole de Kayar" />
+              <input name="org_name" type="text" className="wizard-form-control" required placeholder="ex: Coopérative Agricole de Kayar" />
             </div>
 
             <div className="wizard-form-group">
               <label>Forme juridique *</label>
-              <select className="wizard-form-control" required value={legalForm} onChange={(e) => setLegalForm(e.target.value)}>
+              <select name="legal_form" className="wizard-form-control" required value={legalForm} onChange={(e) => setLegalForm(e.target.value)}>
                 <option>Coopérative</option>
                 <option>Groupement d'Intérêt Économique (GIE)</option>
                 <option>Mutuelle</option>
@@ -101,7 +129,7 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "0.85rem" }}>
             <div className="wizard-form-group">
               <label>Région *</label>
-              <select className="wizard-form-control" required defaultValue={REGIONS[0]}>
+              <select name="region" className="wizard-form-control" required defaultValue={REGIONS[0]}>
                 {REGIONS.map((r) => (
                   <option key={r}>{r}</option>
                 ))}
@@ -110,12 +138,12 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
 
             <div className="wizard-form-group">
               <label>Département / Commune *</label>
-              <input type="text" className="wizard-form-control" required placeholder="ex: Rufisque / Sangalkam" />
+              <input name="commune" type="text" className="wizard-form-control" required placeholder="ex: Rufisque / Sangalkam" />
             </div>
 
             <div className="wizard-form-group">
               <label>Secteur d’activité *</label>
-              <select className="wizard-form-control" required defaultValue={SECTORS[0]}>
+              <select name="sector" className="wizard-form-control" required defaultValue={SECTORS[0]}>
                 {SECTORS.map((s) => (
                   <option key={s}>{s}</option>
                 ))}
@@ -126,24 +154,24 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "0.85rem" }}>
             <div className="wizard-form-group">
               <label>Nombre de membres / salariés *</label>
-              <input type="number" className="wizard-form-control" required placeholder="ex: 120" />
+              <input name="staff_count" type="number" className="wizard-form-control" required placeholder="ex: 120" />
             </div>
 
             <div className="wizard-form-group">
               <label>Nom et fonction du représentant légal *</label>
-              <input type="text" className="wizard-form-control" required placeholder="ex: Fatou Ndiaye, Présidente" />
+              <input name="contact_name" type="text" className="wizard-form-control" required placeholder="ex: Fatou Ndiaye, Présidente" />
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "1rem", marginBottom: "0.85rem" }}>
             <div className="wizard-form-group">
               <label>Téléphone / WhatsApp *</label>
-              <input type="tel" className="wizard-form-control" required placeholder="+221 77 000 00 00" />
+              <input name="phone" type="tel" className="wizard-form-control" required placeholder="+221 77 000 00 00" />
             </div>
 
             <div className="wizard-form-group">
               <label>Adresse électronique *</label>
-              <input type="email" className="wizard-form-control" required placeholder="contact@organisation.sn" />
+              <input name="email" type="email" className="wizard-form-control" required placeholder="contact@organisation.sn" />
             </div>
           </div>
 
@@ -167,8 +195,15 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
             />
           </div>
 
+          {errorMsg && (
+            <p role="alert" style={{ color: "#DC2626", fontSize: "0.875rem", fontWeight: 700, marginBottom: "0.75rem" }}>
+              {errorMsg}
+            </p>
+          )}
+
           <button
             type="submit"
+            disabled={sending}
             className="btn btn-primary"
             style={{
               width: "100%",
@@ -181,7 +216,7 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
               borderRadius: "var(--radius-md)",
             }}
           >
-            <i className="fas fa-paper-plane" /> Transmettre ma manifestation d’intérêt
+            <i className="fas fa-paper-plane" /> {sending ? "Envoi en cours..." : "Transmettre ma manifestation d’intérêt"}
           </button>
         </form>
       </div>
