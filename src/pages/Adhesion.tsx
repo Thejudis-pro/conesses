@@ -431,6 +431,7 @@ export default function AdhesionPage() {
 
                 <button
                   type="submit"
+                  disabled={sending}
                   className="btn btn-primary"
                   style={{
                     width: "100%",
@@ -449,7 +450,7 @@ export default function AdhesionPage() {
                     boxShadow: "0 6px 20px rgba(0, 135, 72, 0.3)",
                   }}
                 >
-                  <i className="fas fa-paper-plane" style={{ fontSize: "1.15rem" }} /> Transmettre ma Manifestation d’Intérêt Officielle
+                  <i className="fas fa-paper-plane" style={{ fontSize: "1.15rem" }} /> {sending ? "Envoi en cours..." : "Transmettre ma Manifestation d’Intérêt Officielle"}
                 </button>
               </form>
             )}
