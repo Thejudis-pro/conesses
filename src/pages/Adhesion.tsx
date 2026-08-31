@@ -179,7 +179,7 @@ export default function AdhesionPage() {
                         l’organisation *
                       </label>
                       <input
-                        type="text"
+                        type="text" name="org_name"
                         className="wizard-form-control"
                         required
                         placeholder="ex: Coopérative Agricole de Kayar"
@@ -193,7 +193,7 @@ export default function AdhesionPage() {
                         juridique *
                       </label>
                       <select
-                        className="wizard-form-control"
+                        className="wizard-form-control" name="legal_form"
                         required
                         value={legalForm}
                         onChange={(e) => setLegalForm(e.target.value)}
@@ -213,7 +213,7 @@ export default function AdhesionPage() {
                         salariés
                       </label>
                       <input
-                        type="number"
+                        type="number" name="staff_count"
                         className="wizard-form-control"
                         placeholder="ex: 120"
                         style={{ height: "44px", fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)" }}
@@ -225,7 +225,7 @@ export default function AdhesionPage() {
                     <div className="wizard-form-group mb-2">
                       <label style={{ color: "var(--primary-green)", fontWeight: 700, fontSize: "0.825rem" }}>Précisez la forme juridique *</label>
                       <input
-                        type="text"
+                        type="text" name="legal_form_other"
                         className="wizard-form-control"
                         required
                         placeholder="ex: Fondation, Association, Waqf..."
@@ -258,7 +258,7 @@ export default function AdhesionPage() {
                         d’Implantation *
                       </label>
                       <select
-                        className="wizard-form-control"
+                        className="wizard-form-control" name="region"
                         required
                         defaultValue={REGIONS[0]}
                         style={{ height: "44px", fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)", fontWeight: 700 }}
@@ -275,7 +275,7 @@ export default function AdhesionPage() {
                         Commune
                       </label>
                       <input
-                        type="text"
+                        type="text" name="commune"
                         className="wizard-form-control"
                         placeholder="ex: Rufisque / Sangalkam"
                         style={{ height: "44px", fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)" }}
@@ -288,7 +288,7 @@ export default function AdhesionPage() {
                         d’activité principal *
                       </label>
                       <select
-                        className="wizard-form-control"
+                        className="wizard-form-control" name="sector"
                         required
                         defaultValue={SECTORS[0]}
                         style={{ height: "44px", fontSize: "0.85rem", borderRadius: "8px", border: "1.5px solid var(--border-light)", fontWeight: 600 }}
@@ -324,7 +324,7 @@ export default function AdhesionPage() {
                         Légal (Nom & Fonction) *
                       </label>
                       <input
-                        type="text"
+                        type="text" name="contact_name"
                         className="wizard-form-control"
                         required
                         placeholder="ex: Fatou Ndiaye, Présidente"
@@ -338,7 +338,7 @@ export default function AdhesionPage() {
                         WhatsApp *
                       </label>
                       <input
-                        type="tel"
+                        type="tel" name="phone"
                         className="wizard-form-control"
                         required
                         placeholder="+221 77 000 00 00"
@@ -352,7 +352,7 @@ export default function AdhesionPage() {
                         Officielle *
                       </label>
                       <input
-                        type="email"
+                        type="email" name="email"
                         className="wizard-form-control"
                         required
                         placeholder="contact@organisation.sn"
@@ -383,7 +383,7 @@ export default function AdhesionPage() {
                       <i className="fas fa-file-alt" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Présentation
                       succincte de l’organisation
                     </label>
-                    <textarea
+                    <textarea name="presentation"
                       className="wizard-form-control"
                       rows={3}
                       placeholder="Présentez brièvement votre organisation, vos activités principales et votre ancrage territorial..."
@@ -396,7 +396,7 @@ export default function AdhesionPage() {
                       <i className="fas fa-pen-nib" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Motivation pour
                       rejoindre le CONESESS
                     </label>
-                    <textarea
+                    <textarea name="message"
                       className="wizard-form-control"
                       rows={3}
                       placeholder="Expliquez vos attentes et motivations pour rejoindre le réseau national CONESESS..."
