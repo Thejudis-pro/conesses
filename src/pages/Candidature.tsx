@@ -3,6 +3,7 @@ import { SubmissionSuccessModal } from "@/components/SubmissionSuccessModal"
 import { useToasts } from "@/components/Toast"
 import { PublicLayout } from "@/components/layout/PublicLayout"
 import { genCandidatureRef } from "@/lib/refs"
+import { readForm, submitWebForm } from "@/lib/submissions"
 
 const ROLES = [
   "Coordinateur National",
@@ -31,16 +32,37 @@ const REGIONS = [
 export default function CandidaturePage() {
   const [successOpen, setSuccessOpen] = useState(false)
   const [refNum, setRefNum] = useState("")
+  const [sending, setSending] = useState(false)
   const { showToast, ToastContainer } = useToasts()
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // TODO(Supabase): insert into `web_forms` (type: "Candidature Comité de
-    // Pilotage") here instead of the original localStorage + crudcrud.com +
-    // formsubmit.co relay.
+    if (sending) return
+    setSending(true)
+    const form = e.currentTarget
+    const f = readForm(form)
     const ref = genCandidatureRef()
+
+    const error = await submitWebForm({
+      reference: ref,
+      form_type: "Candidature Comité de Pilotage",
+      org_name: f.org_name,
+      contact_name: f.contact_name,
+      email: f.email,
+      phone: f.phone,
+      region: f.region,
+      role_wanted: f.role_wanted,
+      message: f.message,
+    })
+    setSending(false)
+
+    if (error) {
+      showToast(error)
+      return
+    }
+
     setRefNum(ref)
-    e.currentTarget.reset()
+    form.reset()
     setSuccessOpen(true)
     showToast(`Votre candidature (${ref}) a été transmise avec succès au Secrétariat technique !`)
   }
@@ -106,7 +128,7 @@ export default function CandidaturePage() {
                     <i className="fas fa-user" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Nom & Prénom *
                   </label>
                   <input
-                    type="text"
+                    type="text" name="contact_name"
                     className="wizard-form-control"
                     required
                     placeholder="ex: Mamadou Diallo"
@@ -120,7 +142,7 @@ export default function CandidaturePage() {
                     Structure *
                   </label>
                   <input
-                    type="text"
+                    type="text" name="org_name"
                     className="wizard-form-control"
                     required
                     placeholder="ex: Union Régionale des Coopératives"
@@ -136,7 +158,7 @@ export default function CandidaturePage() {
                     WhatsApp *
                   </label>
                   <input
-                    type="tel"
+                    type="tel" name="phone"
                     className="wizard-form-control"
                     required
                     placeholder="+221 77 000 00 00"
@@ -149,7 +171,7 @@ export default function CandidaturePage() {
                     <i className="fas fa-at" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Adresse E-mail *
                   </label>
                   <input
-                    type="email"
+                    type="email" name="email"
                     className="wizard-form-control"
                     required
                     placeholder="votre.email@domaine.sn"
@@ -164,7 +186,7 @@ export default function CandidaturePage() {
                     <i className="fas fa-award" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Poste Souhaité *
                   </label>
                   <select
-                    className="wizard-form-control"
+                    className="wizard-form-control" name="role_wanted"
                     required
                     defaultValue=""
                     style={{ height: "44px", fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)" }}
@@ -186,7 +208,7 @@ export default function CandidaturePage() {
                     d'Ancrage *
                   </label>
                   <select
-                    className="wizard-form-control"
+                    className="wizard-form-control" name="region"
                     required
                     defaultValue="Dakar"
                     style={{ height: "44px", fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)" }}
@@ -206,7 +228,7 @@ export default function CandidaturePage() {
                   & Motivations *
                 </label>
                 <textarea
-                  className="wizard-form-control"
+                  className="wizard-form-control" name="message"
                   rows={4}
                   required
                   placeholder="Présentez brièvement votre parcours et les raisons de votre candidature..."
@@ -216,6 +238,7 @@ export default function CandidaturePage() {
 
               <button
                 type="submit"
+                disabled={sending}
                 className="btn btn-primary"
                 style={{
                   width: "100%",
@@ -234,7 +257,7 @@ export default function CandidaturePage() {
                   boxShadow: "0 8px 25px rgba(0, 104, 55, 0.35)",
                 }}
               >
-                <i className="fas fa-paper-plane" style={{ fontSize: "1.15rem", color: "#E9C46A" }} /> Transmettre ma Candidature Officielle
+                <i className="fas fa-paper-plane" style={{ fontSize: "1.15rem", color: "#E9C46A" }} /> {sending ? "Envoi en cours..." : "Transmettre ma Candidature Officielle"}
               </button>
             </form>
           </div>
