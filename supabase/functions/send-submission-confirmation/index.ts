@@ -1,25 +1,15 @@
 // Sends the standard "votre demande a bien été transmise" confirmation e-mail
 // to a form submitter via Resend, right after a public web_forms submission.
 //
-// Setup needed before this works (Lovable/deploy step):
-//   1. Create a Resend API key (resend.com) and set it as the Supabase secret
-//      RESEND_API_KEY for this project.
-//   2. Optionally set CONFIRMATION_FROM_EMAIL (defaults below) — must be a
-//      sender address/domain verified in Resend.
-//   3. Deploy this function (`supabase functions deploy send-submission-confirmation`
-//      or via Lovable's sync). No further code changes needed.
-//
-// Called from the client in src/lib/submissions.ts right after a successful
-// insert into web_forms — fire-and-forget, never blocks or fails the
-// submission itself if the e-mail can't be sent.
+// This function routes calls through the Lovable connector gateway using the
+// linked Resend connection. Required env vars: LOVABLE_API_KEY, RESEND_API_KEY.
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")
-const FROM_EMAIL = Deno.env.get("CONFIRMATION_FROM_EMAIL") ?? "CONESESS Sénégal <contact@conesess.sn>"
+import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-}
+const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
+const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const FROM_EMAIL = Deno.env.get('CONFIRMATION_FROM_EMAIL') ?? 'CONESESS Sénégal <contact@conesess.sn>'
 
 interface ConfirmationRequest {
   email: string
@@ -29,28 +19,31 @@ interface ConfirmationRequest {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders })
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const { email, contact_name, reference, form_type } = (await req.json()) as ConfirmationRequest
 
     if (!email || !reference || !form_type) {
-      return new Response(JSON.stringify({ error: "email, reference et form_type sont requis" }), {
+      return new Response(JSON.stringify({ error: 'email, reference et form_type sont requis' }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: "RESEND_API_KEY n'est pas configurée sur ce projet Supabase" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+    if (!LOVABLE_API_KEY || !RESEND_API_KEY) {
+      return new Response(
+        JSON.stringify({ error: 'LOVABLE_API_KEY ou RESEND_API_KEY non configurée' }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
-    const greeting = contact_name ? `Bonjour ${contact_name},` : "Bonjour,"
+    const greeting = contact_name ? `Bonjour ${contact_name},` : 'Bonjour,'
     const html = `
       <p>${greeting}</p>
       <p><strong>Votre demande a bien été transmise.</strong></p>
@@ -60,11 +53,12 @@ Deno.serve(async (req) => {
       <p>Cordialement,<br/>CONESESS Sénégal</p>
     `.trim()
 
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
+    const response = await fetch(`${GATEWAY_URL}/emails`, {
+      method: 'POST',
       headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'X-Connection-Api-Key': RESEND_API_KEY,
       },
       body: JSON.stringify({
         from: FROM_EMAIL,
@@ -74,21 +68,27 @@ Deno.serve(async (req) => {
       }),
     })
 
-    if (!resendResponse.ok) {
-      const detail = await resendResponse.text()
-      return new Response(JSON.stringify({ error: "Échec de l'envoi via Resend", detail }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+    if (!response.ok) {
+      const detail = await response.text()
+      console.error(`Resend gateway error [${response.status}]: ${detail}`)
+      return new Response(
+        JSON.stringify({ error: 'Échec de l\'envoi via Resend', status: response.status, detail }),
+        {
+          status: 502,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const data = await response.json().catch(() => ({}))
+    return new Response(JSON.stringify({ ok: true, data }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (e) {
+    console.error('send-submission-confirmation error:', e)
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }
 })
