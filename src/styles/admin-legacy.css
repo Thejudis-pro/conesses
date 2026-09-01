@@ -85,7 +85,7 @@
 
 .admin-nav-section-title {
   font-size: 0.675rem;
-  font-weight: 800;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: rgba(255, 255, 255, 0.45);
@@ -96,12 +96,12 @@
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  padding: 0.7rem 0.95rem;
+  padding: 0.65rem 0.95rem;
   color: rgba(255, 255, 255, 0.75);
   text-decoration: none;
   border-radius: 10px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.85rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -113,7 +113,7 @@
 
 .admin-nav-item.active {
   background: var(--admin-green);
-  font-weight: 700;
+  font-weight: 600;
   box-shadow: 0 4px 14px rgba(0, 104, 55, 0.4);
 }
 
@@ -184,8 +184,8 @@
 
 .metric-value-huge {
   font-family: 'Outfit', sans-serif;
-  font-size: 2rem;
-  font-weight: 800;
+  font-size: 1.85rem;
+  font-weight: 700;
   color: var(--admin-text-main);
   line-height: 1.1;
   margin-bottom: 0.25rem;
@@ -225,15 +225,20 @@
 
 .admin-table {
   width: 100%;
+  min-width: 760px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.85rem;
 }
 
+.admin-table .badge {
+  white-space: nowrap !important;
+}
+
 .admin-table th {
   background: var(--admin-bg-light);
   color: var(--admin-text-main);
-  font-weight: 700;
+  font-weight: 600;
   padding: 0.85rem 0.75rem;
   border-bottom: 2px solid var(--admin-border-light);
   white-space: nowrap;
@@ -250,6 +255,58 @@
   background: rgba(0, 104, 55, 0.03);
 }
 
+/* Buttons used across the admin toolbar/header/modals — kept undefined in the
+   original admin.html (relied on ad-hoc inline styles per call site), which
+   left them without a border-radius, gap, or hover state. Defined properly
+   here instead of duplicating the same inline style at every call site. */
+.action-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: none;
+  border-radius: 10px;
+  padding: 0.6rem 1rem;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-btn-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.action-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-btn-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--admin-border-light);
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--admin-text-body);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.action-btn-pill:hover {
+  background: var(--admin-bg-light);
+}
+
 /* ACTION BUTTONS GROUP */
 .btn-group-actions {
   display: flex;
@@ -263,7 +320,7 @@
   border-radius: 6px;
   padding: 0.35rem 0.6rem;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -333,5 +390,57 @@
     align-items: stretch !important;
     gap: 0.75rem !important;
     padding: 0.85rem 1rem !important;
+  }
+  .admin-top-bar > div {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .admin-table-card {
+    padding: 1rem !important;
+    border-radius: 14px !important;
+  }
+  .table-header-toolbar {
+    flex-direction: column;
+    align-items: stretch !important;
+  }
+  .table-header-toolbar > div:last-child {
+    display: flex;
+  }
+  .table-header-toolbar .action-btn-primary,
+  .table-header-toolbar .action-btn-pill {
+    flex: 1;
+    justify-content: center;
+  }
+  .metrics-grid-4 {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important;
+    gap: 0.75rem !important;
+  }
+  .metric-card-pro {
+    padding: 1rem !important;
+  }
+  .metric-value-huge {
+    font-size: 1.5rem !important;
+  }
+  .admin-table {
+    font-size: 0.8rem !important;
+  }
+  .cr80-badge-preview {
+    width: 100% !important;
+    max-width: 320px;
+  }
+}
+
+@media (max-width: 479.98px) {
+  .admin-viewport {
+    padding: 0.6rem !important;
+  }
+  .metrics-grid-4 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .btn-act {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.7rem !important;
   }
 }

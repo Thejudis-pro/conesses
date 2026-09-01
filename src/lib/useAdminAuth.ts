@@ -44,9 +44,23 @@ export function useAdminAuth() {
     return null
   }
 
+  /**
+   * Self-service account creation. New accounts get no role until an
+   * existing admin grants one in `user_roles` — signing up here never
+   * grants admin access by itself, only lets someone request an account.
+   */
+  const signUp = async (email: string, password: string) => {
+    setState((s) => ({ ...s, loading: true, authError: null }))
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    setState((s) => ({ ...s, loading: false }))
+    if (error) return { error: error.message, needsEmailConfirmation: false }
+    const needsEmailConfirmation = !data.session
+    return { error: null, needsEmailConfirmation }
+  }
+
   const signOut = async () => {
     await supabase.auth.signOut()
   }
 
-  return { ...state, signIn, signOut }
+  return { ...state, signIn, signUp, signOut }
 }

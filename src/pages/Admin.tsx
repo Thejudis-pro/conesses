@@ -116,9 +116,50 @@ function ActionButtons({
   )
 }
 
-function AdminLoginGate({ authError, onSignIn, loading }: { authError: string | null; onSignIn: (email: string, password: string) => void; loading: boolean }) {
+function AdminLoginGate({
+  authError,
+  onSignIn,
+  onSignUp,
+  loading,
+}: {
+  authError: string | null
+  onSignIn: (email: string, password: string) => void
+  onSignUp: (email: string, password: string) => Promise<{ error: string | null; needsEmailConfirmation: boolean }>
+  loading: boolean
+}) {
+  const [mode, setMode] = useState<"login" | "register">("login")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [signUpError, setSignUpError] = useState<string | null>(null)
+  const [signUpDone, setSignUpDone] = useState(false)
+
+  const switchMode = (next: "login" | "register") => {
+    setMode(next)
+    setSignUpError(null)
+    setSignUpDone(false)
+    setPassword("")
+    setConfirmPassword("")
+  }
+
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setSignUpError(null)
+    if (password !== confirmPassword) {
+      setSignUpError("Les mots de passe ne correspondent pas.")
+      return
+    }
+    if (password.length < 6) {
+      setSignUpError("Le mot de passe doit contenir au moins 6 caractères.")
+      return
+    }
+    const { error } = await onSignUp(email, password)
+    if (error) {
+      setSignUpError(error)
+      return
+    }
+    setSignUpDone(true)
+  }
 
   return (
     <div className="admin-app-body" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: "1rem" }}>
@@ -126,41 +167,109 @@ function AdminLoginGate({ authError, onSignIn, loading }: { authError: string | 
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
           <img src={logo} alt="Logo CONESESS" style={{ width: "60px", height: "60px", borderRadius: "50%", border: "3px solid var(--admin-green)", marginBottom: "0.75rem" }} />
           <h3 style={{ margin: 0, color: "var(--admin-text-main)", fontSize: "1.3rem" }}>Espace Administrateur</h3>
-          <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Connexion réservée aux comptes habilités</p>
+          <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
+            {mode === "login" ? "Connexion réservée aux comptes habilités" : "Demander la création d'un compte"}
+          </p>
         </div>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            onSignIn(email, password)
-          }}
-        >
-          <div className="wizard-form-group mb-3">
-            <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>E-mail Administrateur</label>
-            <input type="email" className="wizard-form-control" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ height: "42px" }} />
-          </div>
-          <div className="wizard-form-group mb-3">
-            <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>Mot de Passe</label>
-            <input type="password" className="wizard-form-control" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ height: "42px" }} />
-          </div>
-
-          {authError && (
-            <p style={{ color: "#DC2626", fontSize: "0.825rem", fontWeight: 600, marginBottom: "1rem" }}>
-              {authError === "not-admin" ? "Ce compte n'a pas le rôle administrateur." : "Identifiants invalides."}
-            </p>
-          )}
-
-          <button type="submit" disabled={loading} className="action-btn-primary" style={{ width: "100%", justifyContent: "center", background: "var(--admin-green)", padding: "0.75rem" }}>
-            {loading ? "Connexion..." : "Se connecter"}
+        <div style={{ display: "flex", gap: "0.4rem", background: "var(--admin-bg-light)", borderRadius: "999px", padding: "0.25rem", marginBottom: "1.5rem" }}>
+          <button
+            type="button"
+            onClick={() => switchMode("login")}
+            style={{
+              flex: 1, border: "none", borderRadius: "999px", padding: "0.5rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
+              background: mode === "login" ? "var(--admin-card-bg-light)" : "transparent",
+              color: mode === "login" ? "var(--admin-text-main)" : "var(--admin-text-muted)",
+              boxShadow: mode === "login" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+            }}
+          >
+            Se connecter
           </button>
-        </form>
+          <button
+            type="button"
+            onClick={() => switchMode("register")}
+            style={{
+              flex: 1, border: "none", borderRadius: "999px", padding: "0.5rem", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer",
+              background: mode === "register" ? "var(--admin-card-bg-light)" : "transparent",
+              color: mode === "register" ? "var(--admin-text-main)" : "var(--admin-text-muted)",
+              boxShadow: mode === "register" ? "0 1px 4px rgba(0,0,0,0.08)" : "none",
+            }}
+          >
+            Créer un compte
+          </button>
+        </div>
+
+        {mode === "login" ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              onSignIn(email, password)
+            }}
+          >
+            <div className="wizard-form-group mb-3">
+              <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>E-mail Administrateur</label>
+              <input type="email" className="wizard-form-control" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ height: "42px" }} />
+            </div>
+            <div className="wizard-form-group mb-3">
+              <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>Mot de Passe</label>
+              <input type="password" className="wizard-form-control" required value={password} onChange={(e) => setPassword(e.target.value)} style={{ height: "42px" }} />
+            </div>
+
+            {authError && (
+              <p style={{ color: "#DC2626", fontSize: "0.825rem", fontWeight: 600, marginBottom: "1rem" }}>
+                {authError === "not-admin" ? "Ce compte n'a pas le rôle administrateur." : "Identifiants invalides."}
+              </p>
+            )}
+
+            <button type="submit" disabled={loading} className="action-btn-primary" style={{ width: "100%", justifyContent: "center", background: "var(--admin-green)", padding: "0.75rem" }}>
+              {loading ? "Connexion..." : "Se connecter"}
+            </button>
+          </form>
+        ) : signUpDone ? (
+          <div style={{ textAlign: "center" }}>
+            <i className="fas fa-envelope-circle-check" style={{ fontSize: "2rem", color: "var(--admin-green)", marginBottom: "0.75rem", display: "block" }} />
+            <p style={{ fontSize: "0.875rem", color: "var(--admin-text-body)", lineHeight: 1.6, marginBottom: "1rem" }}>
+              Compte créé pour <strong>{email}</strong>. Confirmez votre adresse via le lien reçu par e-mail, puis demandez à un
+              administrateur existant de vous attribuer le rôle administrateur.
+            </p>
+            <button type="button" onClick={() => switchMode("login")} className="action-btn-pill" style={{ width: "100%", justifyContent: "center" }}>
+              Retour à la connexion
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleSignUp}>
+            <div className="wizard-form-group mb-3">
+              <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>E-mail</label>
+              <input type="email" className="wizard-form-control" required value={email} onChange={(e) => setEmail(e.target.value)} style={{ height: "42px" }} />
+            </div>
+            <div className="wizard-form-group mb-3">
+              <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>Mot de Passe</label>
+              <input type="password" className="wizard-form-control" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} style={{ height: "42px" }} />
+            </div>
+            <div className="wizard-form-group mb-3">
+              <label style={{ fontWeight: 600, fontSize: "0.8rem" }}>Confirmer le Mot de Passe</label>
+              <input type="password" className="wizard-form-control" required minLength={6} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={{ height: "42px" }} />
+            </div>
+
+            <p style={{ fontSize: "0.75rem", color: "var(--admin-text-muted)", marginBottom: "1rem", lineHeight: 1.5 }}>
+              Après confirmation de l'e-mail, le rôle administrateur doit encore être attribué manuellement par un administrateur
+              existant — créer un compte ne donne pas accès au tableau de bord.
+            </p>
+
+            {signUpError && <p style={{ color: "#DC2626", fontSize: "0.825rem", fontWeight: 600, marginBottom: "1rem" }}>{signUpError}</p>}
+
+            <button type="submit" disabled={loading} className="action-btn-primary" style={{ width: "100%", justifyContent: "center", background: "var(--admin-navy)", padding: "0.75rem" }}>
+              {loading ? "Création..." : "Créer le compte"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   )
 }
 
 export default function AdminPage() {
-  const { loading: authLoading, session, isAdmin, authError: rawAuthError, signIn, signOut } = useAdminAuth()
+  const { loading: authLoading, session, isAdmin, authError: rawAuthError, signIn, signUp, signOut } = useAdminAuth()
   const [loginError, setLoginError] = useState<string | null>(null)
 
   const [activeTab, setActiveTab] = useState<TabId>("tab-dashboard")
@@ -273,14 +382,14 @@ export default function AdminPage() {
   }
 
   if (!session) {
-    return <AdminLoginGate authError={loginError} loading={authLoading} onSignIn={handleSignIn} />
+    return <AdminLoginGate authError={loginError} loading={authLoading} onSignIn={handleSignIn} onSignUp={signUp} />
   }
 
   if (!isAdmin) {
     return (
       <div className="admin-app-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: "1rem", padding: "1rem" }}>
         <i className="fas fa-lock" style={{ fontSize: "2.5rem", color: "var(--admin-red)" }} />
-        <p style={{ color: "var(--admin-text-main)", fontWeight: 700 }}>Ce compte n'a pas le rôle administrateur.</p>
+        <p style={{ color: "var(--admin-text-main)", fontWeight: 600 }}>Ce compte n'a pas le rôle administrateur.</p>
         <button onClick={signOut} className="action-btn-pill">
           Se déconnecter
         </button>
@@ -302,7 +411,7 @@ export default function AdminPage() {
             <img src={logo} alt="Logo CONESESS" className="admin-brand-logo" />
             <div>
               <strong style={{ fontSize: "0.95rem", display: "block", color: "#FFFFFF" }}>CONESESS SÉNÉGAL</strong>
-              <small style={{ color: "var(--admin-gold-bright)", fontSize: "0.725rem", fontWeight: 700 }}>Espace Administrateur</small>
+              <small style={{ color: "var(--admin-gold-bright)", fontSize: "0.725rem", fontWeight: 600 }}>Espace Administrateur</small>
             </div>
           </div>
 
@@ -354,7 +463,7 @@ export default function AdminPage() {
                 <i className="fas fa-bars" />
               </button>
               <div>
-                <h1 style={{ margin: 0, fontSize: "1.35rem", color: "var(--admin-text-main)", fontWeight: 800 }}>Espace Administrateur CONESESS</h1>
+                <h1 style={{ margin: 0, fontSize: "1.25rem", color: "var(--admin-text-main)", fontWeight: 700 }}>Espace Administrateur CONESESS</h1>
                 <small style={{ color: "var(--admin-text-muted)", fontWeight: 600 }}>Connecté : {session.user.email}</small>
               </div>
             </div>
@@ -387,7 +496,7 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="metric-value-huge">{webForms.length}</div>
-                  <small style={{ color: "var(--admin-green)", fontWeight: 700 }}>
+                  <small style={{ color: "var(--admin-green)", fontWeight: 600 }}>
                     <i className="fas fa-arrow-up" /> En direct de Supabase
                   </small>
                 </div>
@@ -411,7 +520,7 @@ export default function AdminPage() {
                     </div>
                   </div>
                   <div className="metric-value-huge">{steeringForms.length}</div>
-                  <small style={{ color: "var(--admin-navy)", fontWeight: 700 }}>Comité de Pilotage FES-ESS</small>
+                  <small style={{ color: "var(--admin-navy)", fontWeight: 600 }}>Comité de Pilotage FES-ESS</small>
                 </div>
 
                 <div className="metric-card-pro">
