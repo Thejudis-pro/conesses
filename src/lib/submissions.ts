@@ -51,5 +51,16 @@ export async function submitWebForm(payload: WebFormSubmission): Promise<string 
     console.error("Échec de l'enregistrement du formulaire", error.message)
     return "Une erreur est survenue lors de l'envoi. Merci de réessayer."
   }
+
+  // Best-effort confirmation e-mail — never blocks or fails the submission
+  // itself. See supabase/functions/send-submission-confirmation for setup.
+  if (payload.email) {
+    supabase.functions
+      .invoke("send-submission-confirmation", {
+        body: { email: payload.email, contact_name: payload.contact_name, reference: payload.reference, form_type: payload.form_type },
+      })
+      .catch((e) => console.error("Échec de l'envoi de l'e-mail de confirmation", e))
+  }
+
   return null
 }
