@@ -14,7 +14,7 @@ import {
   type PendingAdminAccount,
 } from "@/lib/adminData"
 import { buildGmailComposeUrl } from "@/lib/gmail"
-import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, type NewsPost } from "@/lib/news"
+import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, uploadNewsImage, type NewsPost } from "@/lib/news"
 import { downloadSubmissionReceipt } from "@/lib/pdfReceipt"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 import type { Tables } from "@/integrations/supabase/types"
@@ -517,12 +517,23 @@ export default function AdminPage() {
     const form = e.currentTarget
     const title = (form.elements.namedItem("title") as HTMLInputElement).value.trim()
     const content = (form.elements.namedItem("content") as HTMLTextAreaElement).value.trim()
-    const imageUrl = (form.elements.namedItem("image_url") as HTMLInputElement).value.trim()
+    const imageFile = (form.elements.namedItem("image_file") as HTMLInputElement).files?.[0]
     const published = (form.elements.namedItem("published") as HTMLInputElement).checked
     if (!title || !content) return
 
     setNewsSaving(true)
-    const input = { title, content, image_url: imageUrl || null, published }
+
+    let imageUrl = editingPost?.image_url ?? null
+    if (imageFile) {
+      const { url, error: uploadError } = await uploadNewsImage(imageFile)
+      if (uploadError) {
+        setNewsSaving(false)
+        return showToast(`Erreur d'envoi de l'image : ${uploadError}`)
+      }
+      imageUrl = url
+    }
+
+    const input = { title, content, image_url: imageUrl, published }
     const err = editingPost ? await updateNewsPost(editingPost.id, input) : await createNewsPost(input)
     setNewsSaving(false)
 
@@ -1577,8 +1588,14 @@ export default function AdminPage() {
                 <textarea name="content" className="wizard-form-control" rows={6} required defaultValue={editingPost?.content ?? ""} placeholder="Texte de l'actualité..." />
               </div>
               <div className="wizard-form-group mb-3">
-                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Image (URL, optionnel)</label>
-                <input type="url" name="image_url" className="wizard-form-control" defaultValue={editingPost?.image_url ?? ""} placeholder="https://..." />
+                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Image (optionnel)</label>
+                {editingPost?.image_url && (
+                  <div style={{ marginBottom: "0.5rem" }}>
+                    <img src={editingPost.image_url} alt="" style={{ maxWidth: "160px", maxHeight: "100px", borderRadius: "8px", display: "block", marginBottom: "0.35rem" }} />
+                    <small style={{ color: "var(--admin-text-muted)" }}>Image actuelle — choisissez un fichier ci-dessous pour la remplacer.</small>
+                  </div>
+                )}
+                <input type="file" name="image_file" accept="image/*" className="wizard-form-control" style={{ padding: "0.5rem" }} />
               </div>
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", fontWeight: 600, marginBottom: "1.25rem", cursor: "pointer" }}>
                 <input type="checkbox" name="published" defaultChecked={editingPost?.published ?? false} style={{ width: "auto" }} />

@@ -19,6 +19,16 @@ export async function fetchAllNewsAdmin(): Promise<{ data: NewsPost[]; error: st
   return { data: data ?? [], error: null }
 }
 
+/** Uploads an image file to the public `news-images` bucket and returns its public URL. */
+export async function uploadNewsImage(file: File): Promise<{ url: string | null; error: string | null }> {
+  const ext = file.name.split(".").pop() ?? "jpg"
+  const path = `${crypto.randomUUID()}.${ext}`
+  const { error } = await supabase.storage.from("news-images").upload(path, file)
+  if (error) return { url: null, error: error.message }
+  const { data } = supabase.storage.from("news-images").getPublicUrl(path)
+  return { url: data.publicUrl, error: null }
+}
+
 export async function createNewsPost(input: { title: string; content: string; image_url: string | null; published: boolean }): Promise<string | null> {
   const { error } = await supabase.from("news_posts").insert(input)
   return error?.message ?? null
