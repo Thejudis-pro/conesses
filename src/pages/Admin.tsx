@@ -57,7 +57,7 @@ const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "tab-web-forms", icon: "fas fa-inbox", label: "Réception Formulaires" },
   { id: "tab-adhesions", icon: "fas fa-id-card", label: "Adhésions Membres" },
   { id: "tab-steering", icon: "fas fa-users-cog", label: "Comité de Pilotage" },
-  { id: "tab-members", icon: "fas fa-building", label: "Entreprises ESS" },
+  { id: "tab-members", icon: "fas fa-database", label: "Base de Données CONESESS" },
   { id: "tab-badges", icon: "fas fa-id-badge", label: "Confection Badges CR80" },
   { id: "tab-checkin", icon: "fas fa-qrcode", label: "Scanner Émargement" },
   { id: "tab-admins", icon: "fas fa-user-shield", label: "Comptes Administrateurs" },
@@ -391,10 +391,10 @@ export default function AdminPage() {
   const [pendingAccountsError, setPendingAccountsError] = useState<string | null>(null)
   const [grantingId, setGrantingId] = useState<string | null>(null)
 
-  // TODO(Supabase): "Entreprises ESS" / badge studio / check-in still use
-  // this local-only list — no `organizations`/`members` table exists yet.
-  // Only the 4 tabs explicitly requested (dashboard, réception formulaires,
-  // adhésions, comité de pilotage) are wired to the real `web_forms` table.
+  // TODO(Supabase): manual additions to "Base de Données CONESESS" (badge
+  // studio / check-in too) still use this local-only list — no
+  // `organizations` table exists yet. Accepted "Adhésion Membre" web_forms
+  // rows are read directly from `webForms` instead (see `approvedMembers`).
   const [members, setMembers] = useState<Member[]>([])
 
   const [badgeName, setBadgeName] = useState("")
@@ -532,6 +532,8 @@ export default function AdminPage() {
   const adhesionForms = webForms.filter((w) => ADHESION_TYPES.includes(w.form_type))
   const steeringForms = webForms.filter((w) => w.form_type === CANDIDATURE_TYPE)
   const regionsCount = new Set(webForms.map((w) => w.region).filter(Boolean)).size
+  // A "Adhésion Membre" submission becomes part of the members database once accepted.
+  const approvedMembers = webForms.filter((w) => w.form_type === "Adhésion Membre" && w.status === "Approuvé")
 
   return (
     <div className="admin-app-body" data-admin-theme={theme}>
@@ -945,16 +947,18 @@ export default function AdminPage() {
             </section>
           )}
 
-          {/* TAB 5: REGISTRE ENTREPRISES ESS */}
+          {/* TAB 5: BASE DE DONNÉES CONESESS */}
           {activeTab === "tab-members" && (
             <section className="admin-tab-content">
               <div className="admin-table-card">
                 <div className="table-header-toolbar">
                   <div>
                     <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
-                      <i className="fas fa-building" style={{ color: "var(--admin-green)" }} /> Annuaire Général des Entreprises ESS
+                      <i className="fas fa-database" style={{ color: "var(--admin-green)" }} /> Base de Données CONESESS
                     </h3>
-                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Base consolidée des coopératives, mutuelles et entreprises de l'ESS au Sénégal.</p>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
+                      Structures membres : adhésions acceptées depuis « Réception Formulaires », plus les ajouts manuels.
+                    </p>
                   </div>
                   <button onClick={() => setAddMemberOpen(true)} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-green)" }}>
                     <i className="fas fa-plus" /> Ajouter Manuellement
@@ -965,34 +969,52 @@ export default function AdminPage() {
                   <table className="admin-table">
                     <thead>
                       <tr>
-                        <th>Matricule</th>
+                        <th>Réf / Matricule</th>
                         <th>Structure</th>
-                        <th>Type</th>
-                        <th>Département</th>
+                        <th>Forme Juridique</th>
+                        <th>Région</th>
                         <th>Téléphone</th>
-                        <th>Statut</th>
+                        <th>Origine</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {members.length === 0 ? (
-                        <EmptyRow colSpan={6}>Aucune structure enregistrée dans l'annuaire.</EmptyRow>
+                      {approvedMembers.length === 0 && members.length === 0 ? (
+                        <EmptyRow colSpan={6}>Aucune structure enregistrée. Les adhésions acceptées apparaîtront ici.</EmptyRow>
                       ) : (
-                        members.map((m) => (
-                          <tr key={m.ref}>
-                            <td>
-                              <strong>{m.ref}</strong>
-                            </td>
-                            <td>
-                              <strong>{m.name}</strong>
-                            </td>
-                            <td>{m.type}</td>
-                            <td>{m.region}</td>
-                            <td>{m.phone}</td>
-                            <td>
-                              <span className="badge badge-green">Actif</span>
-                            </td>
-                          </tr>
-                        ))
+                        <>
+                          {approvedMembers.map((wf) => (
+                            <tr key={wf.id}>
+                              <td>
+                                <strong style={{ color: "var(--admin-green)" }}>{wf.reference}</strong>
+                              </td>
+                              <td>
+                                <strong>{wf.org_name}</strong>
+                              </td>
+                              <td>{wf.legal_form}</td>
+                              <td>{wf.region}</td>
+                              <td>{wf.phone}</td>
+                              <td>
+                                <span className="badge badge-green">Adhésion Acceptée</span>
+                              </td>
+                            </tr>
+                          ))}
+                          {members.map((m) => (
+                            <tr key={m.ref}>
+                              <td>
+                                <strong>{m.ref}</strong>
+                              </td>
+                              <td>
+                                <strong>{m.name}</strong>
+                              </td>
+                              <td>{m.type}</td>
+                              <td>{m.region}</td>
+                              <td>{m.phone}</td>
+                              <td>
+                                <span className="badge badge-navy">Ajout Manuel</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </>
                       )}
                     </tbody>
                   </table>
