@@ -9,28 +9,14 @@ interface MobileNavDrawerProps {
   onClose: () => void
 }
 
-const navItems: { hash: string; icon: string; label: string }[] = [
-  { hash: "#gouvernance", icon: "fas fa-sitemap", label: "Gouvernance Souveraine" },
-  { hash: "#incubateur", icon: "fas fa-rocket", label: "Incubateur IAN-ESS" },
-  { hash: "#observatoire", icon: "fas fa-search", label: "Observatoire ON-ESS" },
-]
-
-const poleItems: { hash: string; icon: string; label: string }[] = [
-  { hash: "#poles", icon: "fas fa-th-large", label: "4 Pôles Métiers" },
-  { hash: "#chaines-de-valeur", icon: "fas fa-link", label: "Chaînes de Valeur" },
-  { hash: "#ecosysteme", icon: "fas fa-handshake", label: "Écosystème & Partenariats" },
-  { hash: "#plaidoyer", icon: "fas fa-balance-scale", label: "Plaidoyer avec l'État" },
-]
-
 /**
- * Reproduces `.mobile-nav-drawer` for all four public pages. The brand
+ * Reproduces `.mobile-nav-drawer` for all public pages. The brand
  * block (3 lines on home vs 2 on subpages) and footer WhatsApp pill
  * (present everywhere except adhesion.html in the original) are kept
  * exactly as they were, not "fixed" for consistency.
  */
 export function MobileNavDrawer({ page, isOpen, onClose }: MobileNavDrawerProps) {
   const isHome = page === "home"
-  const sectionHref = (hash: string) => (isHome ? hash : `/${hash}`)
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : ""
@@ -73,31 +59,23 @@ export function MobileNavDrawer({ page, isOpen, onClose }: MobileNavDrawerProps)
             <div className="mobile-drawer-section-title">
               <i className="fas fa-compass" /> PRÉSENTATION & STRATÉGIE
             </div>
-            <a
-              href={sectionHref("#accueil")}
-              className={`mobile-nav-item${isHome ? " active" : ""}`}
-              onClick={onClose}
-            >
+            <Link to="/" className={`mobile-nav-item${isHome ? " active" : ""}`} onClick={onClose}>
               <i className="fas fa-home" /> <span>Accueil</span>
-            </a>
+            </Link>
 
             <div className="mobile-drawer-section-title">
               <i className="fas fa-sitemap" /> GOUVERNANCE & PILIERS
             </div>
-            {navItems.map((item) => (
-              <a key={item.hash} href={sectionHref(item.hash)} className="mobile-nav-item" onClick={onClose}>
-                <i className={item.icon} /> <span>{item.label}</span>
-              </a>
-            ))}
+            <Link to="/gouvernance" className={`mobile-nav-item${page === "gouvernance" ? " active" : ""}`} onClick={onClose}>
+              <i className="fas fa-sitemap" /> <span>Gouvernance</span>
+            </Link>
 
             <div className="mobile-drawer-section-title">
               <i className="fas fa-network-wired" /> PÔLES & PARTENARIATS
             </div>
-            {poleItems.map((item) => (
-              <a key={item.hash} href={sectionHref(item.hash)} className="mobile-nav-item" onClick={onClose}>
-                <i className={item.icon} /> <span>{item.label}</span>
-              </a>
-            ))}
+            <Link to="/poles-action" className={`mobile-nav-item${page === "poles-action" ? " active" : ""}`} onClick={onClose}>
+              <i className="fas fa-th-large" /> <span>Pôles & Action</span>
+            </Link>
 
             <div className="mobile-drawer-section-title">
               <i className="fas fa-paper-plane" /> FORMULAIRES & ACCÈS

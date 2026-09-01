@@ -16,25 +16,39 @@ interface FooterNavLink {
 // links) — this is preserved literally rather than "fixed" for consistency.
 const FOOTER_NAV_LINKS: Record<Exclude<Page, "home">, FooterNavLink[]> = {
   adhesion: [
-    { to: "/#accueil", label: "Accueil", icon: "fas fa-chevron-right" },
+    { to: "/", label: "Accueil", icon: "fas fa-chevron-right" },
     { to: "/#contexte", label: "Contexte", icon: "fas fa-chevron-right" },
     { to: "/#vision", label: "Vision", icon: "fas fa-chevron-right" },
-    { to: "/#gouvernance", label: "Gouvernance", icon: "fas fa-chevron-right" },
+    { to: "/gouvernance", label: "Gouvernance", icon: "fas fa-chevron-right" },
     { to: "/contact", label: "Contact", icon: "fas fa-envelope" },
   ],
   contact: [
-    { to: "/#accueil", label: "Accueil", icon: "fas fa-chevron-right" },
+    { to: "/", label: "Accueil", icon: "fas fa-chevron-right" },
     { to: "/#contexte", label: "Contexte", icon: "fas fa-chevron-right" },
     { to: "/#vision", label: "Vision", icon: "fas fa-chevron-right" },
-    { to: "/#gouvernance", label: "Gouvernance", icon: "fas fa-chevron-right" },
+    { to: "/gouvernance", label: "Gouvernance", icon: "fas fa-chevron-right" },
     { to: "/contact", label: "Contact", icon: "fas fa-envelope" },
   ],
   candidature: [
-    { to: "/#accueil", label: "Accueil", icon: "fas fa-chevron-right" },
+    { to: "/", label: "Accueil", icon: "fas fa-chevron-right" },
     { to: "/#contexte", label: "Contexte", icon: "fas fa-chevron-right" },
     { to: "/#vision", label: "Vision", icon: "fas fa-chevron-right" },
     { to: "/adhesion", label: "Formulaire Adhésion", icon: "fas fa-id-card", gold: true },
     { to: "/candidature", label: "Candidature Comité", icon: "fas fa-users-cog", gold: true },
+    { to: "/contact", label: "Contact", icon: "fas fa-envelope" },
+  ],
+  gouvernance: [
+    { to: "/", label: "Accueil", icon: "fas fa-chevron-right" },
+    { to: "/#contexte", label: "Contexte", icon: "fas fa-chevron-right" },
+    { to: "/#vision", label: "Vision", icon: "fas fa-chevron-right" },
+    { to: "/poles-action", label: "Pôles & Action", icon: "fas fa-chevron-right" },
+    { to: "/contact", label: "Contact", icon: "fas fa-envelope" },
+  ],
+  "poles-action": [
+    { to: "/", label: "Accueil", icon: "fas fa-chevron-right" },
+    { to: "/#contexte", label: "Contexte", icon: "fas fa-chevron-right" },
+    { to: "/#vision", label: "Vision", icon: "fas fa-chevron-right" },
+    { to: "/gouvernance", label: "Gouvernance", icon: "fas fa-chevron-right" },
     { to: "/contact", label: "Contact", icon: "fas fa-envelope" },
   ],
 }
