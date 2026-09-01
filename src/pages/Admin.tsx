@@ -53,7 +53,10 @@ const ACCESS_LEVELS = [
   { value: "Comité de Pilotage", label: "🏛️ Comité de Pilotage (Bleu Roi)", color: "#0A2540" },
   { value: "Invité d'Honneur", label: "🟣 Invité d'Honneur (Violet Impérial)", color: "#7C3AED" },
   { value: "Presse / Média", label: "🔴 Presse / Média (Rouge Cramoisi)", color: "#DC2626" },
+  { value: "Badge Gratuit", label: "🎫 Badge Gratuit (Accès Libre)", color: "#64748B" },
 ]
+
+const FREE_BADGE_LEVEL = ACCESS_LEVELS[ACCESS_LEVELS.length - 1]
 
 const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "tab-dashboard", icon: "fas fa-chart-line", label: "Tableau de Bord" },
@@ -1275,6 +1278,19 @@ export default function AdminPage() {
                   <h3 style={{ margin: "0 0 1.25rem 0", fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
                     <i className="fas fa-id-badge" style={{ color: "var(--admin-green)" }} /> Confection de Badge CR80
                   </h3>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBadgeName("")
+                      setBadgeOrg("")
+                      setBadgeAccessLevel(FREE_BADGE_LEVEL)
+                    }}
+                    className="action-btn-pill"
+                    style={{ width: "100%", justifyContent: "center", marginBottom: "1.25rem" }}
+                  >
+                    <i className="fas fa-ticket-alt" /> Créer un Badge Gratuit
+                  </button>
 
                   <div className="wizard-form-group mb-3">
                     <label style={{ fontWeight: 600, fontSize: "0.825rem" }}>Sélectionner un Participant *</label>
