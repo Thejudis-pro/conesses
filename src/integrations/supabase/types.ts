@@ -16,31 +16,31 @@ export type Database = {
     Tables: {
       news_posts: {
         Row: {
-          id: string
-          created_at: string
-          updated_at: string
-          title: string
           content: string
+          created_at: string
+          id: string
           image_url: string | null
           published: boolean
+          title: string
+          updated_at: string
         }
         Insert: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          title: string
           content: string
+          created_at?: string
+          id?: string
           image_url?: string | null
           published?: boolean
+          title: string
+          updated_at?: string
         }
         Update: {
-          id?: string
-          created_at?: string
-          updated_at?: string
-          title?: string
           content?: string
+          created_at?: string
+          id?: string
           image_url?: string | null
           published?: boolean
+          title?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -124,6 +124,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      grant_admin_role: { Args: { target_user_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -132,19 +133,13 @@ export type Database = {
         Returns: boolean
       }
       list_pending_admin_accounts: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
-          id: string
-          email: string
           created_at: string
+          email: string
           email_confirmed: boolean
+          id: string
         }[]
-      }
-      grant_admin_role: {
-        Args: {
-          target_user_id: string
-        }
-        Returns: undefined
       }
     }
     Enums: {
