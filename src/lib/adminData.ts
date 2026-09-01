@@ -32,6 +32,24 @@ export function webFormsToCSV(rows: WebForm[]): string {
   return [header, ...lines].join("\n")
 }
 
+export interface PendingAdminAccount {
+  id: string
+  email: string
+  created_at: string
+  email_confirmed: boolean
+}
+
+export async function fetchPendingAdminAccounts(): Promise<{ data: PendingAdminAccount[]; error: string | null }> {
+  const { data, error } = await supabase.rpc("list_pending_admin_accounts")
+  if (error) return { data: [], error: error.message }
+  return { data: data ?? [], error: null }
+}
+
+export async function grantAdminRole(targetUserId: string): Promise<string | null> {
+  const { error } = await supabase.rpc("grant_admin_role", { target_user_id: targetUserId })
+  return error?.message ?? null
+}
+
 export function downloadCSV(csv: string, filename: string) {
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
   const link = document.createElement("a")

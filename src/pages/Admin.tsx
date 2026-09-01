@@ -1,7 +1,18 @@
 import { useEffect, useState } from "react"
 import logo from "@/assets/images/logo.jpg"
 import { useToasts } from "@/components/Toast"
-import { ADHESION_TYPES, CANDIDATURE_TYPE, deleteWebForm, downloadCSV, fetchWebForms, updateWebFormStatus, webFormsToCSV } from "@/lib/adminData"
+import {
+  ADHESION_TYPES,
+  CANDIDATURE_TYPE,
+  deleteWebForm,
+  downloadCSV,
+  fetchPendingAdminAccounts,
+  fetchWebForms,
+  grantAdminRole,
+  updateWebFormStatus,
+  webFormsToCSV,
+  type PendingAdminAccount,
+} from "@/lib/adminData"
 import { buildGmailComposeUrl } from "@/lib/gmail"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 import type { Tables } from "@/integrations/supabase/types"
@@ -283,6 +294,11 @@ export default function AdminPage() {
   const [webFormsLoading, setWebFormsLoading] = useState(false)
   const [webFormsError, setWebFormsError] = useState<string | null>(null)
 
+  const [pendingAccounts, setPendingAccounts] = useState<PendingAdminAccount[]>([])
+  const [pendingAccountsLoading, setPendingAccountsLoading] = useState(false)
+  const [pendingAccountsError, setPendingAccountsError] = useState<string | null>(null)
+  const [grantingId, setGrantingId] = useState<string | null>(null)
+
   // TODO(Supabase): "Entreprises ESS" / badge studio / check-in still use
   // this local-only list — no `organizations`/`members` table exists yet.
   // Only the 4 tabs explicitly requested (dashboard, réception formulaires,
@@ -309,9 +325,33 @@ export default function AdminPage() {
     setWebForms(data)
   }
 
+  const loadPendingAccounts = async () => {
+    setPendingAccountsLoading(true)
+    const { data, error } = await fetchPendingAdminAccounts()
+    setPendingAccountsLoading(false)
+    if (error) {
+      setPendingAccountsError(error)
+      return
+    }
+    setPendingAccountsError(null)
+    setPendingAccounts(data)
+  }
+
   useEffect(() => {
-    if (session && isAdmin) loadWebForms()
+    if (session && isAdmin) {
+      loadWebForms()
+      loadPendingAccounts()
+    }
   }, [session, isAdmin])
+
+  const handleGrantAdmin = async (account: PendingAdminAccount) => {
+    setGrantingId(account.id)
+    const err = await grantAdminRole(account.id)
+    setGrantingId(null)
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast(`✅ Rôle administrateur accordé à ${account.email}.`)
+    loadPendingAccounts()
+  }
 
   const handleSignIn = async (email: string, password: string) => {
     setLoginError(null)
@@ -1021,13 +1061,66 @@ export default function AdminPage() {
                 <div className="table-header-toolbar">
                   <div>
                     <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
-                      <i className="fas fa-user-shield" style={{ color: "var(--admin-green)" }} /> Gestion des Administrateurs
+                      <i className="fas fa-user-shield" style={{ color: "var(--admin-green)" }} /> Comptes en Attente de Validation
                     </h3>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Session active : <strong>{session.user.email}</strong>. La création de nouveaux comptes administrateurs se fait actuellement via Supabase (Auth + table{" "}
-                      <code>user_roles</code>).
+                      Comptes créés via « Créer un compte » sur la page de connexion, qui n'ont pas encore le rôle administrateur. Session active :{" "}
+                      <strong>{session.user.email}</strong>.
                     </p>
                   </div>
+                  <button onClick={loadPendingAccounts} className="action-btn-pill" style={{ fontSize: "0.8rem" }}>
+                    <i className="fas fa-sync-alt" /> Actualiser
+                  </button>
+                </div>
+
+                {pendingAccountsError && (
+                  <div style={{ background: "var(--admin-soft-red)", border: "1px solid var(--admin-red)", color: "var(--admin-red)", padding: "1rem 1.25rem", borderRadius: "12px", marginBottom: "1.25rem" }}>
+                    Erreur de chargement des comptes : {pendingAccountsError}
+                  </div>
+                )}
+
+                <div className="admin-table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>E-mail</th>
+                        <th>Créé le</th>
+                        <th>E-mail Confirmé</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pendingAccountsLoading ? (
+                        <EmptyRow colSpan={4}>Chargement...</EmptyRow>
+                      ) : pendingAccounts.length === 0 ? (
+                        <EmptyRow colSpan={4}>Aucun compte en attente de validation.</EmptyRow>
+                      ) : (
+                        pendingAccounts.map((acc) => (
+                          <tr key={acc.id}>
+                            <td>
+                              <strong>{acc.email}</strong>
+                            </td>
+                            <td>{new Date(acc.created_at).toLocaleString("fr-FR")}</td>
+                            <td>
+                              <span className={`badge ${acc.email_confirmed ? "badge-green" : "badge-gold"}`}>
+                                {acc.email_confirmed ? "Confirmé" : "En attente"}
+                              </span>
+                            </td>
+                            <td>
+                              <button
+                                onClick={() => handleGrantAdmin(acc)}
+                                disabled={grantingId === acc.id}
+                                className="btn-act btn-act-approve"
+                                title="Accorder le rôle Administrateur"
+                              >
+                                <i className="fas fa-user-check" /> {grantingId === acc.id ? "..." : "Accorder l'accès Admin"}
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             </section>

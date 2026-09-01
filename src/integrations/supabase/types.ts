@@ -101,6 +101,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_pending_admin_accounts: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          created_at: string
+          email_confirmed: boolean
+        }[]
+      }
+      grant_admin_role: {
+        Args: {
+          target_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
