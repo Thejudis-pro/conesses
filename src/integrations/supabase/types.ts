@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      news_posts: {
+        Row: {
+          id: string
+          created_at: string
+          updated_at: string
+          title: string
+          content: string
+          image_url: string | null
+          published: boolean
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          title: string
+          content: string
+          image_url?: string | null
+          published?: boolean
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          updated_at?: string
+          title?: string
+          content?: string
+          image_url?: string | null
+          published?: boolean
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string

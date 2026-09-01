@@ -62,6 +62,9 @@ export function MobileNavDrawer({ page, isOpen, onClose }: MobileNavDrawerProps)
             <Link to="/" className={`mobile-nav-item${isHome ? " active" : ""}`} onClick={onClose}>
               <i className="fas fa-home" /> <span>Accueil</span>
             </Link>
+            <Link to="/actualites" className={`mobile-nav-item${page === "actualites" ? " active" : ""}`} onClick={onClose}>
+              <i className="fas fa-newspaper" /> <span>Actualités</span>
+            </Link>
 
             <div className="mobile-drawer-section-title">
               <i className="fas fa-sitemap" /> GOUVERNANCE & PILIERS

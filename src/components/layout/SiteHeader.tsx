@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import logo from "@/assets/images/logo.jpg"
 
-export type Page = "home" | "adhesion" | "candidature" | "contact" | "gouvernance" | "poles-action"
+export type Page = "home" | "adhesion" | "candidature" | "contact" | "gouvernance" | "poles-action" | "actualites"
 
 interface SiteHeaderProps {
   page: Page
@@ -63,6 +63,11 @@ export function SiteHeader({ page, onToggleMobileNav }: SiteHeaderProps) {
             <li>
               <Link to="/" className={navLinkClass("home")}>
                 Accueil
+              </Link>
+            </li>
+            <li>
+              <Link to="/actualites" className={navLinkClass("actualites")}>
+                Actualités
               </Link>
             </li>
             <li>

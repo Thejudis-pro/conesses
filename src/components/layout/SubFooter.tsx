@@ -51,6 +51,12 @@ const FOOTER_NAV_LINKS: Record<Exclude<Page, "home">, FooterNavLink[]> = {
     { to: "/gouvernance", label: "Gouvernance", icon: "fas fa-chevron-right" },
     { to: "/contact", label: "Contact", icon: "fas fa-envelope" },
   ],
+  actualites: [
+    { to: "/", label: "Accueil", icon: "fas fa-chevron-right" },
+    { to: "/gouvernance", label: "Gouvernance", icon: "fas fa-chevron-right" },
+    { to: "/poles-action", label: "Pôles & Action", icon: "fas fa-chevron-right" },
+    { to: "/contact", label: "Contact", icon: "fas fa-envelope" },
+  ],
 }
 
 /** `.footer` on adhesion.html / candidature.html / contact.html (the simpler variant). */

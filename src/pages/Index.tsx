@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom"
+import { ActualitesTeaser } from "@/components/home/ActualitesTeaser"
 import { BannerVision } from "@/components/home/BannerVision"
 import { Contexte } from "@/components/home/Contexte"
 import { Hero } from "@/components/home/Hero"
@@ -28,6 +29,7 @@ export default function IndexPage() {
     <PublicLayout page="home">
       <Hero />
       <BannerVision />
+      <ActualitesTeaser />
       <Contexte />
       <Vision />
 

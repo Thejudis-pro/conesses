@@ -13,6 +13,7 @@ import {
   type PendingAdminAccount,
 } from "@/lib/adminData"
 import { buildGmailComposeUrl } from "@/lib/gmail"
+import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, type NewsPost } from "@/lib/news"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 import type { Tables } from "@/integrations/supabase/types"
 import "@/styles/admin-legacy.css"
@@ -25,6 +26,7 @@ type TabId =
   | "tab-adhesions"
   | "tab-steering"
   | "tab-members"
+  | "tab-news"
   | "tab-badges"
   | "tab-checkin"
   | "tab-admins"
@@ -57,6 +59,7 @@ const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
   { id: "tab-adhesions", icon: "fas fa-id-card", label: "Adhésions Membres" },
   { id: "tab-steering", icon: "fas fa-users-cog", label: "Comité de Pilotage" },
   { id: "tab-members", icon: "fas fa-database", label: "Base de Données CONESESS" },
+  { id: "tab-news", icon: "fas fa-newspaper", label: "Actualités" },
   { id: "tab-badges", icon: "fas fa-id-badge", label: "Confection Badges CR80" },
   { id: "tab-checkin", icon: "fas fa-qrcode", label: "Scanner Émargement" },
   { id: "tab-admins", icon: "fas fa-user-shield", label: "Comptes Administrateurs" },
@@ -390,6 +393,13 @@ export default function AdminPage() {
   const [pendingAccountsError, setPendingAccountsError] = useState<string | null>(null)
   const [grantingId, setGrantingId] = useState<string | null>(null)
 
+  const [newsPosts, setNewsPosts] = useState<NewsPost[]>([])
+  const [newsLoading, setNewsLoading] = useState(false)
+  const [newsError, setNewsError] = useState<string | null>(null)
+  const [newsModalOpen, setNewsModalOpen] = useState(false)
+  const [editingPost, setEditingPost] = useState<NewsPost | null>(null)
+  const [newsSaving, setNewsSaving] = useState(false)
+
   // TODO(Supabase): manual additions to "Base de Données CONESESS" (badge
   // studio / check-in too) still use this local-only list — no
   // `organizations` table exists yet. Accepted "Adhésion Membre" web_forms
@@ -428,10 +438,23 @@ export default function AdminPage() {
     setPendingAccounts(data)
   }
 
+  const loadNews = async () => {
+    setNewsLoading(true)
+    const { data, error } = await fetchAllNewsAdmin()
+    setNewsLoading(false)
+    if (error) {
+      setNewsError(error)
+      return
+    }
+    setNewsError(null)
+    setNewsPosts(data)
+  }
+
   useEffect(() => {
     if (session && isAdmin) {
       loadWebForms()
       loadPendingAccounts()
+      loadNews()
     }
   }, [session, isAdmin])
 
@@ -442,6 +465,51 @@ export default function AdminPage() {
     if (err) return showToast(`Erreur : ${err}`)
     showToast(`✅ Rôle administrateur accordé à ${account.email}.`)
     loadPendingAccounts()
+  }
+
+  const openCreatePost = () => {
+    setEditingPost(null)
+    setNewsModalOpen(true)
+  }
+
+  const openEditPost = (post: NewsPost) => {
+    setEditingPost(post)
+    setNewsModalOpen(true)
+  }
+
+  const handleSaveNews = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const form = e.currentTarget
+    const title = (form.elements.namedItem("title") as HTMLInputElement).value.trim()
+    const content = (form.elements.namedItem("content") as HTMLTextAreaElement).value.trim()
+    const imageUrl = (form.elements.namedItem("image_url") as HTMLInputElement).value.trim()
+    const published = (form.elements.namedItem("published") as HTMLInputElement).checked
+    if (!title || !content) return
+
+    setNewsSaving(true)
+    const input = { title, content, image_url: imageUrl || null, published }
+    const err = editingPost ? await updateNewsPost(editingPost.id, input) : await createNewsPost(input)
+    setNewsSaving(false)
+
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast(editingPost ? "✏️ Publication mise à jour." : "✅ Publication créée.")
+    setNewsModalOpen(false)
+    loadNews()
+  }
+
+  const handleTogglePublished = async (post: NewsPost) => {
+    const err = await setNewsPostPublished(post.id, !post.published)
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast(post.published ? "Publication dépubliée." : "✅ Publication mise en ligne.")
+    loadNews()
+  }
+
+  const handleDeleteNews = async (post: NewsPost) => {
+    if (!window.confirm(`Supprimer définitivement la publication « ${post.title} » ?`)) return
+    const err = await deleteNewsPost(post.id)
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast("🗑️ Publication supprimée.")
+    loadNews()
   }
 
   const handleSignIn = async (email: string, password: string) => {
@@ -557,21 +625,21 @@ export default function AdminPage() {
             ))}
 
             <div className="admin-nav-section-title">REGISTRES & DOSSIERS</div>
-            {NAV_ITEMS.slice(2, 5).map((item) => (
+            {NAV_ITEMS.slice(2, 6).map((item) => (
               <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
                 <i className={item.icon} /> <span>{item.label}</span>
               </a>
             ))}
 
             <div className="admin-nav-section-title">STUDIO BADGES & ÉMARGEMENT</div>
-            {NAV_ITEMS.slice(5, 7).map((item) => (
+            {NAV_ITEMS.slice(6, 8).map((item) => (
               <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
                 <i className={item.icon} /> <span>{item.label}</span>
               </a>
             ))}
 
             <div className="admin-nav-section-title">PARAMÈTRES & ACCÈS</div>
-            {NAV_ITEMS.slice(7, 8).map((item) => (
+            {NAV_ITEMS.slice(8, 9).map((item) => (
               <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
                 <i className={item.icon} /> <span>{item.label}</span>
               </a>
@@ -1022,6 +1090,84 @@ export default function AdminPage() {
             </section>
           )}
 
+          {/* TAB: ACTUALITÉS (BLOG) */}
+          {activeTab === "tab-news" && (
+            <section className="admin-tab-content">
+              <div className="admin-table-card">
+                <div className="table-header-toolbar">
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
+                      <i className="fas fa-newspaper" style={{ color: "var(--admin-green)" }} /> Actualités
+                    </h3>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
+                      Publications affichées sur la page publique « Actualités » et en aperçu sur l'accueil, une fois publiées.
+                    </p>
+                  </div>
+                  <button onClick={openCreatePost} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-green)" }}>
+                    <i className="fas fa-plus" /> Nouvelle Publication
+                  </button>
+                </div>
+
+                {newsError && (
+                  <div style={{ background: "var(--admin-soft-red)", border: "1px solid var(--admin-red)", color: "var(--admin-red)", padding: "1rem 1.25rem", borderRadius: "12px", marginBottom: "1.25rem" }}>
+                    Erreur de chargement des actualités : {newsError}
+                  </div>
+                )}
+
+                <div className="admin-table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>Titre</th>
+                        <th>Créé le</th>
+                        <th>Statut</th>
+                        <th style={{ minWidth: "260px" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {newsLoading ? (
+                        <EmptyRow colSpan={4}>Chargement...</EmptyRow>
+                      ) : newsPosts.length === 0 ? (
+                        <EmptyRow colSpan={4}>Aucune publication. Créez la première actualité.</EmptyRow>
+                      ) : (
+                        newsPosts.map((post) => (
+                          <tr key={post.id}>
+                            <td>
+                              <strong>{post.title}</strong>
+                            </td>
+                            <td>{new Date(post.created_at).toLocaleDateString("fr-FR")}</td>
+                            <td>
+                              <span className={`badge ${post.published ? "badge-green" : "badge-gold"}`}>
+                                {post.published ? "Publiée" : "Brouillon"}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="btn-group-actions">
+                                <button onClick={() => openEditPost(post)} className="btn-act btn-act-view" title="Modifier">
+                                  <i className="fas fa-pen" /> Modifier
+                                </button>
+                                <button
+                                  onClick={() => handleTogglePublished(post)}
+                                  className={`btn-act ${post.published ? "btn-act-reject" : "btn-act-approve"}`}
+                                  title={post.published ? "Dépublier" : "Publier"}
+                                >
+                                  <i className={`fas ${post.published ? "fa-eye-slash" : "fa-eye"}`} /> {post.published ? "Dépublier" : "Publier"}
+                                </button>
+                                <button onClick={() => handleDeleteNews(post)} className="btn-act btn-act-delete" title="Supprimer">
+                                  <i className="fas fa-trash-alt" /> Supprimer
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+          )}
+
           {/* TAB 6: CR80 BADGE STUDIO */}
           {activeTab === "tab-badges" && (
             <section className="admin-tab-content">
@@ -1274,6 +1420,43 @@ export default function AdminPage() {
           onReject={() => handleReject(viewingForm)}
           onDelete={() => handleDelete(viewingForm)}
         />
+      )}
+
+      {/* MODAL: CREATE / EDIT NEWS POST */}
+      {newsModalOpen && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 1060, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+          <div style={{ background: "var(--admin-card-bg-light)", borderRadius: "20px", padding: "2rem", maxWidth: "560px", width: "100%", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 style={{ margin: "0 0 1rem 0", color: "var(--admin-text-main)" }}>
+              {editingPost ? "Modifier la Publication" : "Nouvelle Publication"}
+            </h3>
+            <form onSubmit={handleSaveNews}>
+              <div className="wizard-form-group mb-2">
+                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Titre *</label>
+                <input type="text" name="title" className="wizard-form-control" required defaultValue={editingPost?.title ?? ""} placeholder="ex: Lancement du FORA'ESS 2026" />
+              </div>
+              <div className="wizard-form-group mb-2">
+                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Contenu *</label>
+                <textarea name="content" className="wizard-form-control" rows={6} required defaultValue={editingPost?.content ?? ""} placeholder="Texte de l'actualité..." />
+              </div>
+              <div className="wizard-form-group mb-3">
+                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Image (URL, optionnel)</label>
+                <input type="url" name="image_url" className="wizard-form-control" defaultValue={editingPost?.image_url ?? ""} placeholder="https://..." />
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", fontWeight: 600, marginBottom: "1.25rem", cursor: "pointer" }}>
+                <input type="checkbox" name="published" defaultChecked={editingPost?.published ?? false} style={{ width: "auto" }} />
+                Publier immédiatement (visible sur le site public)
+              </label>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <button type="submit" disabled={newsSaving} className="action-btn-primary" style={{ flex: 1, justifyContent: "center", background: "var(--admin-green)" }}>
+                  {newsSaving ? "Enregistrement..." : "Enregistrer"}
+                </button>
+                <button type="button" onClick={() => setNewsModalOpen(false)} className="action-btn-pill">
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* MODAL: MANUALLY ADD MEMBER */}
