@@ -75,17 +75,24 @@ const STATUS_BADGE_CLASS = (status: string) => (status === "Approuvé" ? "badge-
 
 function ActionButtons({
   row,
+  onView,
   onApprove,
   onReject,
   onDelete,
 }: {
   row: WebForm
+  onView?: () => void
   onApprove: () => void
   onReject: () => void
   onDelete: () => void
 }) {
   return (
     <div className="btn-group-actions">
+      {onView && (
+        <button onClick={onView} className="btn-act btn-act-view" title="Voir le Formulaire Complet">
+          <i className="fas fa-eye" /> Voir
+        </button>
+      )}
       <button onClick={onApprove} className="btn-act btn-act-approve" title="Accepter et Valider">
         <i className="fas fa-check" /> Accepter
       </button>
@@ -123,6 +130,90 @@ function ActionButtons({
       <button onClick={onDelete} className="btn-act btn-act-delete" title="Supprimer Définitivement">
         <i className="fas fa-trash-alt" /> Supprimer
       </button>
+    </div>
+  )
+}
+
+const DetailField = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <div style={{ marginBottom: "1rem" }}>
+    <span style={{ display: "block", fontSize: "0.7rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--admin-text-muted)", marginBottom: "0.2rem" }}>
+      {label}
+    </span>
+    <span style={{ fontSize: "0.9rem", color: "var(--admin-text-body)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{value || "—"}</span>
+  </div>
+)
+
+function WebFormDetailModal({
+  row,
+  onClose,
+  onApprove,
+  onReject,
+  onDelete,
+}: {
+  row: WebForm
+  onClose: () => void
+  onApprove: () => void
+  onReject: () => void
+  onDelete: () => void
+}) {
+  const details = (row.details ?? {}) as Record<string, unknown>
+  const detailText = (key: string) => {
+    const v = details[key]
+    return typeof v === "string" || typeof v === "number" ? String(v) : ""
+  }
+
+  return (
+    <div className="modal-overlay show">
+      <div className="modal-card" style={{ maxWidth: "720px" }}>
+        <button className="modal-close" onClick={onClose}>
+          &times;
+        </button>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.75rem", marginBottom: "1.5rem", paddingRight: "2rem" }}>
+          <div>
+            <span className={`badge ${row.form_type === CANDIDATURE_TYPE ? "badge-gold" : "badge-green"}`} style={{ marginBottom: "0.5rem" }}>
+              {row.form_type}
+            </span>
+            <h3 style={{ margin: "0.4rem 0 0 0", color: "var(--admin-text-main)", fontSize: "1.3rem", fontWeight: 700 }}>{row.reference}</h3>
+            <small style={{ color: "var(--admin-text-muted)" }}>Reçu le {new Date(row.created_at).toLocaleString("fr-FR")}</small>
+          </div>
+          <span className={`badge ${STATUS_BADGE_CLASS(row.status)}`}>{row.status}</span>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0 1.5rem" }}>
+          <DetailField label="Nom du Contact" value={row.contact_name} />
+          <DetailField label="Organisation" value={row.org_name} />
+          <DetailField label="E-mail" value={row.email} />
+          <DetailField label="Téléphone" value={row.phone} />
+          <DetailField label="Région" value={row.region} />
+          <DetailField label="Département / Commune" value={detailText("commune")} />
+          <DetailField label="Secteur d'activité" value={row.sector} />
+          <DetailField label="Forme Juridique" value={row.legal_form} />
+          {row.role_wanted && <DetailField label="Poste Souhaité" value={row.role_wanted} />}
+          {detailText("staff_count") && <DetailField label="Nombre de Membres / Salariés" value={detailText("staff_count")} />}
+        </div>
+
+        {detailText("presentation") && <DetailField label="Présentation de l'Organisation" value={detailText("presentation")} />}
+        {row.message && <DetailField label="Message / Motivation" value={row.message} />}
+
+        <div style={{ borderTop: "1px solid var(--admin-border-light)", paddingTop: "1.25rem", marginTop: "0.5rem" }}>
+          <ActionButtons
+            row={row}
+            onApprove={() => {
+              onApprove()
+              onClose()
+            }}
+            onReject={() => {
+              onReject()
+              onClose()
+            }}
+            onDelete={() => {
+              onDelete()
+              onClose()
+            }}
+          />
+        </div>
+      </div>
     </div>
   )
 }
@@ -293,6 +384,7 @@ export default function AdminPage() {
   const [webForms, setWebForms] = useState<WebForm[]>([])
   const [webFormsLoading, setWebFormsLoading] = useState(false)
   const [webFormsError, setWebFormsError] = useState<string | null>(null)
+  const [viewingForm, setViewingForm] = useState<WebForm | null>(null)
 
   const [pendingAccounts, setPendingAccounts] = useState<PendingAdminAccount[]>([])
   const [pendingAccountsLoading, setPendingAccountsLoading] = useState(false)
@@ -629,7 +721,13 @@ export default function AdminPage() {
                               <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
                             </td>
                             <td>
-                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
+                              <ActionButtons
+                                row={wf}
+                                onView={() => setViewingForm(wf)}
+                                onApprove={() => handleApprove(wf)}
+                                onReject={() => handleReject(wf)}
+                                onDelete={() => handleDelete(wf)}
+                              />
                             </td>
                           </tr>
                         ))
@@ -699,7 +797,13 @@ export default function AdminPage() {
                               <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
                             </td>
                             <td>
-                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
+                              <ActionButtons
+                                row={wf}
+                                onView={() => setViewingForm(wf)}
+                                onApprove={() => handleApprove(wf)}
+                                onReject={() => handleReject(wf)}
+                                onDelete={() => handleDelete(wf)}
+                              />
                             </td>
                           </tr>
                         ))
@@ -758,7 +862,13 @@ export default function AdminPage() {
                               <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
                             </td>
                             <td>
-                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
+                              <ActionButtons
+                                row={wf}
+                                onView={() => setViewingForm(wf)}
+                                onApprove={() => handleApprove(wf)}
+                                onReject={() => handleReject(wf)}
+                                onDelete={() => handleDelete(wf)}
+                              />
                             </td>
                           </tr>
                         ))
@@ -817,7 +927,13 @@ export default function AdminPage() {
                               <span className={`badge ${STATUS_BADGE_CLASS(wf.status)}`}>{wf.status}</span>
                             </td>
                             <td>
-                              <ActionButtons row={wf} onApprove={() => handleApprove(wf)} onReject={() => handleReject(wf)} onDelete={() => handleDelete(wf)} />
+                              <ActionButtons
+                                row={wf}
+                                onView={() => setViewingForm(wf)}
+                                onApprove={() => handleApprove(wf)}
+                                onReject={() => handleReject(wf)}
+                                onDelete={() => handleDelete(wf)}
+                              />
                             </td>
                           </tr>
                         ))
@@ -1127,6 +1243,17 @@ export default function AdminPage() {
           )}
         </main>
       </div>
+
+      {/* MODAL: FULL WEB FORM DETAIL */}
+      {viewingForm && (
+        <WebFormDetailModal
+          row={viewingForm}
+          onClose={() => setViewingForm(null)}
+          onApprove={() => handleApprove(viewingForm)}
+          onReject={() => handleReject(viewingForm)}
+          onDelete={() => handleDelete(viewingForm)}
+        />
+      )}
 
       {/* MODAL: MANUALLY ADD MEMBER */}
       {addMemberOpen && (
