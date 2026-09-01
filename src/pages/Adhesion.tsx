@@ -2,6 +2,7 @@ import { useState } from "react"
 import { SubmissionSuccessModal } from "@/components/SubmissionSuccessModal"
 import { useToasts } from "@/components/Toast"
 import { PublicLayout } from "@/components/layout/PublicLayout"
+import type { ReceiptField } from "@/lib/pdfReceipt"
 import { genAdhesionRef } from "@/lib/refs"
 import { readForm, submitWebForm } from "@/lib/submissions"
 
@@ -24,6 +25,7 @@ export default function AdhesionPage() {
   const [refNum, setRefNum] = useState("CONESESS-2026-8942")
   const [successOpen, setSuccessOpen] = useState(false)
   const [sending, setSending] = useState(false)
+  const [receiptFields, setReceiptFields] = useState<ReceiptField[]>([])
   const { showToast, ToastContainer } = useToasts()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -53,6 +55,19 @@ export default function AdhesionPage() {
       return
     }
 
+    setReceiptFields([
+      { label: "Dénomination de l'organisation", value: f.org_name ?? "" },
+      { label: "Forme juridique", value: (f.legal_form === "autre" ? f.legal_form_other : f.legal_form) ?? "" },
+      { label: "Région d'implantation", value: f.region ?? "" },
+      { label: "Département / Commune", value: f.commune ?? "" },
+      { label: "Secteur d'activité", value: f.sector ?? "" },
+      { label: "Nombre de membres / salariés", value: f.staff_count ?? "" },
+      { label: "Représentant légal", value: f.contact_name ?? "" },
+      { label: "Téléphone", value: f.phone ?? "" },
+      { label: "E-mail", value: f.email ?? "" },
+      { label: "Présentation de l'organisation", value: f.presentation ?? "" },
+      { label: "Motivation", value: f.message ?? "" },
+    ])
     setRefNum(ref)
     setSubmitted(true)
     setSuccessOpen(true)
@@ -234,11 +249,12 @@ export default function AdhesionPage() {
                     <div className="wizard-form-group">
                       <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--primary-navy)", marginBottom: "0.35rem", display: "block" }}>
                         <i className="fas fa-users" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Nombre de membres /
-                        salariés
+                        salariés *
                       </label>
                       <input
                         type="number" name="staff_count"
                         className="wizard-form-control"
+                        required
                         placeholder="ex: 120"
                         style={{ height: "44px", fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)" }}
                       />
@@ -296,11 +312,12 @@ export default function AdhesionPage() {
                     <div className="wizard-form-group">
                       <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--primary-navy)", marginBottom: "0.35rem", display: "block" }}>
                         <i className="fas fa-map-pin" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Département /
-                        Commune
+                        Commune *
                       </label>
                       <input
                         type="text" name="commune"
                         className="wizard-form-control"
+                        required
                         placeholder="ex: Rufisque / Sangalkam"
                         style={{ height: "44px", fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)" }}
                       />
@@ -405,11 +422,12 @@ export default function AdhesionPage() {
                   <div className="wizard-form-group mb-3">
                     <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--primary-navy)", marginBottom: "0.35rem", display: "block" }}>
                       <i className="fas fa-file-alt" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Présentation
-                      succincte de l’organisation
+                      succincte de l’organisation *
                     </label>
                     <textarea name="presentation"
                       className="wizard-form-control"
                       rows={3}
+                      required
                       placeholder="Présentez brièvement votre organisation, vos activités principales et votre ancrage territorial..."
                       style={{ fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)", padding: "0.75rem" }}
                     />
@@ -418,11 +436,12 @@ export default function AdhesionPage() {
                   <div className="wizard-form-group mb-4">
                     <label style={{ fontSize: "0.825rem", fontWeight: 700, color: "var(--primary-navy)", marginBottom: "0.35rem", display: "block" }}>
                       <i className="fas fa-pen-nib" style={{ color: "var(--primary-green)", fontSize: "0.8rem", marginRight: "0.3rem" }} /> Motivation pour
-                      rejoindre le CONESESS
+                      rejoindre le CONESESS *
                     </label>
                     <textarea name="message"
                       className="wizard-form-control"
                       rows={3}
+                      required
                       placeholder="Expliquez vos attentes et motivations pour rejoindre le réseau national CONESESS..."
                       style={{ fontSize: "0.9rem", borderRadius: "8px", border: "1.5px solid var(--border-light)", padding: "0.75rem" }}
                     />
@@ -458,7 +477,13 @@ export default function AdhesionPage() {
         </div>
       </section>
 
-      <SubmissionSuccessModal open={successOpen} refNum={refNum} onClose={() => setSuccessOpen(false)} />
+      <SubmissionSuccessModal
+        open={successOpen}
+        refNum={refNum}
+        onClose={() => setSuccessOpen(false)}
+        formType="Adhésion Membre"
+        fields={receiptFields}
+      />
       <ToastContainer />
     </PublicLayout>
   )

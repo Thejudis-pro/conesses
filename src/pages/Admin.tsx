@@ -5,12 +5,11 @@ import {
   ADHESION_TYPES,
   CANDIDATURE_TYPE,
   deleteWebForm,
-  downloadCSV,
+  downloadWebFormsExcel,
   fetchPendingAdminAccounts,
   fetchWebForms,
   grantAdminRole,
   updateWebFormStatus,
-  webFormsToCSV,
   type PendingAdminAccount,
 } from "@/lib/adminData"
 import { buildGmailComposeUrl } from "@/lib/gmail"
@@ -473,8 +472,8 @@ export default function AdminPage() {
     loadWebForms()
   }
 
-  const handleExportCSV = () => {
-    downloadCSV(webFormsToCSV(webForms), `CONESESS_Formulaires_Web_${new Date().toISOString().slice(0, 10)}.csv`)
+  const handleExportExcel = () => {
+    downloadWebFormsExcel(webForms, `CONESESS_Formulaires_Web_${new Date().toISOString().slice(0, 10)}.xls`)
   }
 
   const switchTab = (id: TabId) => {
@@ -753,8 +752,8 @@ export default function AdminPage() {
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Traitement complet : validation, rejet, suppression, export CSV, e-mail & WhatsApp.</p>
                   </div>
                   <div style={{ display: "flex", gap: "0.5rem" }}>
-                    <button onClick={handleExportCSV} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-navy)" }}>
-                      <i className="fas fa-file-excel" /> Exporter CSV
+                    <button onClick={handleExportExcel} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-navy)" }}>
+                      <i className="fas fa-file-excel" /> Exporter Excel
                     </button>
                   </div>
                 </div>

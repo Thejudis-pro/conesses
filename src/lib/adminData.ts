@@ -22,14 +22,56 @@ export async function deleteWebForm(id: string): Promise<string | null> {
   return error?.message ?? null
 }
 
-export function webFormsToCSV(rows: WebForm[]): string {
-  const header = "Reference,Date,Type,Nom,Structure,Telephone,Email,Statut"
-  const lines = rows.map((r) =>
-    [r.reference, r.created_at, r.form_type, r.contact_name ?? "", r.org_name ?? "", r.phone ?? "", r.email ?? "", r.status]
-      .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-      .join(","),
-  )
-  return [header, ...lines].join("\n")
+const xmlEscape = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+
+/** A native Excel worksheet (SpreadsheetML), built as plain text — no third-party
+ * library needed (the popular `xlsx` package carries an unpatched high-severity
+ * vulnerability, unnecessary for a simple write-only export like this). */
+export function downloadWebFormsExcel(rows: WebForm[], filename: string) {
+  const headers = ["Référence", "Date", "Type", "Nom du Contact", "Organisation", "Téléphone", "Email", "Région", "Statut"]
+  const headerCells = headers.map((h) => `<Cell><Data ss:Type="String">${xmlEscape(h)}</Data></Cell>`).join("")
+
+  const bodyRows = rows
+    .map((r) => {
+      const cells = [
+        r.reference,
+        new Date(r.created_at).toLocaleString("fr-FR"),
+        r.form_type,
+        r.contact_name ?? "",
+        r.org_name ?? "",
+        r.phone ?? "",
+        r.email ?? "",
+        r.region ?? "",
+        r.status,
+      ]
+        .map((v) => `<Cell><Data ss:Type="String">${xmlEscape(v)}</Data></Cell>`)
+        .join("")
+      return `<Row>${cells}</Row>`
+    })
+    .join("")
+
+  const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  <Worksheet ss:Name="Formulaires">
+    <Table>
+      <Row>${headerCells}</Row>
+      ${bodyRows}
+    </Table>
+  </Worksheet>
+</Workbook>`
+
+  const blob = new Blob([xml], { type: "application/vnd.ms-excel;charset=utf-8;" })
+  const link = document.createElement("a")
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 export interface PendingAdminAccount {
@@ -50,11 +92,3 @@ export async function grantAdminRole(targetUserId: string): Promise<string | nul
   return error?.message ?? null
 }
 
-export function downloadCSV(csv: string, filename: string) {
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-  const link = document.createElement("a")
-  link.href = URL.createObjectURL(blob)
-  link.download = filename
-  link.click()
-  URL.revokeObjectURL(link.href)
-}

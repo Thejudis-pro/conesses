@@ -1,5 +1,6 @@
 import { useState } from "react"
 import logo from "@/assets/images/logo.jpg"
+import type { ReceiptField } from "@/lib/pdfReceipt"
 import { genAdhesionRef } from "@/lib/refs"
 import { readForm, submitWebForm } from "@/lib/submissions"
 
@@ -19,16 +20,10 @@ const SECTORS = [
 interface MembershipModalProps {
   open: boolean
   onClose: () => void
-  onSuccess: (ref: string) => void
+  onSuccess: (ref: string, fields: ReceiptField[]) => void
 }
 
-/**
- * Reproduces `#membership-modal` (manifestation d'intérêt) from index.html.
- *
- * TODO(Supabase): on submit this only generates a reference and shows the
- * success modal, exactly like every other form here — see the other forms'
- * TODO comments for the intended `organizations`/`web_forms` insert.
- */
+/** Reproduces `#membership-modal` (manifestation d'intérêt) from index.html. */
 export function MembershipModal({ open, onClose, onSuccess }: MembershipModalProps) {
   const [legalForm, setLegalForm] = useState("Coopérative")
   const [otherLegalForm, setOtherLegalForm] = useState("")
@@ -69,7 +64,19 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
     setLegalForm("Coopérative")
     setOtherLegalForm("")
     onClose()
-    onSuccess(ref)
+    onSuccess(ref, [
+      { label: "Dénomination de l'organisation", value: f.org_name ?? "" },
+      { label: "Forme juridique", value: (f.legal_form === "autre" ? f.legal_form_other : f.legal_form) ?? "" },
+      { label: "Région", value: f.region ?? "" },
+      { label: "Département / Commune", value: f.commune ?? "" },
+      { label: "Secteur d'activité", value: f.sector ?? "" },
+      { label: "Nombre de membres / salariés", value: f.staff_count ?? "" },
+      { label: "Nom et fonction du représentant légal", value: f.contact_name ?? "" },
+      { label: "Téléphone", value: f.phone ?? "" },
+      { label: "E-mail", value: f.email ?? "" },
+      { label: "Présentation de l'organisation", value: f.presentation ?? "" },
+      { label: "Motivation", value: f.message ?? "" },
+    ])
   }
 
   return (
@@ -178,6 +185,7 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
           <div className="wizard-form-group" style={{ marginBottom: "0.85rem" }}>
             <label>Présentation succincte de l’organisation *</label>
             <textarea
+              name="presentation"
               className="wizard-form-control"
               rows={2}
               required
@@ -188,6 +196,7 @@ export function MembershipModal({ open, onClose, onSuccess }: MembershipModalPro
           <div className="wizard-form-group" style={{ marginBottom: "1.15rem" }}>
             <label>Motivation pour rejoindre le CONESESS *</label>
             <textarea
+              name="message"
               className="wizard-form-control"
               rows={2}
               required

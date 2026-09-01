@@ -2,6 +2,7 @@ import { useState } from "react"
 import { SubmissionSuccessModal } from "@/components/SubmissionSuccessModal"
 import { useToasts } from "@/components/Toast"
 import { PublicLayout } from "@/components/layout/PublicLayout"
+import type { ReceiptField } from "@/lib/pdfReceipt"
 import { genCandidatureRef } from "@/lib/refs"
 import { readForm, submitWebForm } from "@/lib/submissions"
 
@@ -33,6 +34,7 @@ export default function CandidaturePage() {
   const [successOpen, setSuccessOpen] = useState(false)
   const [refNum, setRefNum] = useState("")
   const [sending, setSending] = useState(false)
+  const [receiptFields, setReceiptFields] = useState<ReceiptField[]>([])
   const { showToast, ToastContainer } = useToasts()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -61,6 +63,15 @@ export default function CandidaturePage() {
       return
     }
 
+    setReceiptFields([
+      { label: "Nom & Prénom", value: f.contact_name ?? "" },
+      { label: "Organisation / Structure", value: f.org_name ?? "" },
+      { label: "Téléphone", value: f.phone ?? "" },
+      { label: "E-mail", value: f.email ?? "" },
+      { label: "Poste souhaité", value: ROLE_LABELS[f.role_wanted ?? ""] ?? f.role_wanted ?? "" },
+      { label: "Région d'ancrage", value: f.region ?? "" },
+      { label: "Présentation & motivations", value: f.message ?? "" },
+    ])
     setRefNum(ref)
     form.reset()
     setSuccessOpen(true)
@@ -264,7 +275,13 @@ export default function CandidaturePage() {
         </div>
       </section>
 
-      <SubmissionSuccessModal open={successOpen} refNum={refNum} onClose={() => setSuccessOpen(false)} />
+      <SubmissionSuccessModal
+        open={successOpen}
+        refNum={refNum}
+        onClose={() => setSuccessOpen(false)}
+        formType="Candidature Comité de Pilotage"
+        fields={receiptFields}
+      />
       <ToastContainer />
     </PublicLayout>
   )

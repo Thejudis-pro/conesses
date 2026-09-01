@@ -7,15 +7,18 @@ import { MembershipModal } from "@/components/home/MembershipModal"
 import { Plaidoyer } from "@/components/home/Plaidoyer"
 import { Poles } from "@/components/home/Poles"
 import { PublicLayout } from "@/components/layout/PublicLayout"
+import type { ReceiptField } from "@/lib/pdfReceipt"
 
 export default function PolesActionPage() {
   const [membershipOpen, setMembershipOpen] = useState(false)
   const [successOpen, setSuccessOpen] = useState(false)
   const [successRef, setSuccessRef] = useState("")
+  const [receiptFields, setReceiptFields] = useState<ReceiptField[]>([])
   const { showToast, ToastContainer } = useToasts()
 
-  const handleMembershipSuccess = (ref: string) => {
+  const handleMembershipSuccess = (ref: string, fields: ReceiptField[]) => {
     setSuccessRef(ref)
+    setReceiptFields(fields)
     setSuccessOpen(true)
     showToast(`Votre demande a bien été transmise (${ref}).`)
   }
@@ -62,7 +65,13 @@ export default function PolesActionPage() {
       <Plaidoyer onOpenMembershipModal={() => setMembershipOpen(true)} />
 
       <MembershipModal open={membershipOpen} onClose={() => setMembershipOpen(false)} onSuccess={handleMembershipSuccess} />
-      <SubmissionSuccessModal open={successOpen} refNum={successRef} onClose={() => setSuccessOpen(false)} />
+      <SubmissionSuccessModal
+        open={successOpen}
+        refNum={successRef}
+        onClose={() => setSuccessOpen(false)}
+        formType="Manifestation d'intérêt"
+        fields={receiptFields}
+      />
       <ToastContainer />
     </PublicLayout>
   )
