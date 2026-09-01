@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import jsQR from "jsqr"
+import { useEffect, useRef, useState } from "react"
 import logo from "@/assets/images/logo.jpg"
 import { useToasts } from "@/components/Toast"
 import {
@@ -440,6 +441,10 @@ export default function AdminPage() {
   const [checkinCode, setCheckinCode] = useState("")
   const [checkinResult, setCheckinResult] = useState<"valid" | "invalid" | null>(null)
   const [checkinMatch, setCheckinMatch] = useState<Member | null>(null)
+  const [cameraOn, setCameraOn] = useState(false)
+  const [cameraError, setCameraError] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const streamRef = useRef<MediaStream | null>(null)
 
   const loadWebForms = async () => {
     setWebFormsLoading(true)
@@ -590,13 +595,77 @@ export default function AdminPage() {
     showToast(`Membre ${name} ajouté au registre !`)
   }
 
-  const handleCheckin = () => {
-    const code = checkinCode.trim()
+  const handleCheckin = (codeOverride?: string) => {
+    const code = (codeOverride ?? checkinCode).trim()
     if (!code) return
     const match = members.find((m) => m.ref === code) ?? null
     setCheckinMatch(match)
     setCheckinResult(match ? "valid" : "invalid")
   }
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((t) => t.stop())
+    streamRef.current = null
+    setCameraOn(false)
+  }
+
+  const startCamera = async () => {
+    setCameraError(null)
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      streamRef.current = stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream
+        await videoRef.current.play()
+      }
+      setCameraOn(true)
+    } catch {
+      setCameraError("Impossible d'accéder à la caméra. Vérifiez les autorisations du navigateur.")
+    }
+  }
+
+  // Live QR scanning while the camera is on: each frame is drawn to an
+  // off-screen canvas and decoded with jsQR (pure JS, works in every
+  // browser) — the native BarcodeDetector API was tried first but has poor
+  // desktop support (undefined outside ChromeOS/Android in practice).
+  useEffect(() => {
+    if (!cameraOn) return
+    const canvas = document.createElement("canvas")
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })
+    if (!ctx) return
+    let stopped = false
+    let raf = 0
+    const scan = () => {
+      if (stopped) return
+      const video = videoRef.current
+      if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth
+        canvas.height = video.videoHeight
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+        const code = jsQR(imageData.data, imageData.width, imageData.height)
+        if (code?.data) {
+          setCheckinCode(code.data)
+          handleCheckin(code.data)
+          stopCamera()
+          return
+        }
+      }
+      raf = requestAnimationFrame(scan)
+    }
+    raf = requestAnimationFrame(scan)
+    return () => {
+      stopped = true
+      cancelAnimationFrame(raf)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraOn])
+
+  useEffect(() => {
+    if (activeTab !== "tab-checkin") stopCamera()
+  }, [activeTab])
+
+  useEffect(() => stopCamera, [])
 
   // --- Auth gate ---
   if (authLoading) {
@@ -1262,9 +1331,8 @@ export default function AdminPage() {
                   <div className="cr80-badge-preview">
                     <div className="badge-access-band" style={{ background: badgeAccessLevel.color }} />
 
-                    <img src={logo} alt="Logo CONESESS" style={{ width: "50px", height: "50px", borderRadius: "50%", border: "2px solid #E9C46A", marginTop: "1rem", marginBottom: "0.5rem" }} />
-                    <h4 style={{ margin: 0, fontSize: "0.9rem", letterSpacing: "0.05em" }}>CONESESS SÉNÉGAL</h4>
-                    <small style={{ fontSize: "0.675rem", color: "#E9C46A", fontWeight: 700, textTransform: "uppercase" }}>FORA'ESS 2026 - DAKAR</small>
+                    <img src={logo} alt="Logo CONESESS" style={{ width: "50px", height: "50px", borderRadius: "50%", border: "2px solid #D97706", marginTop: "1rem", marginBottom: "0.5rem" }} />
+                    <h4 style={{ margin: 0, fontSize: "0.9rem", letterSpacing: "0.05em", color: "var(--admin-text-main)" }}>CONESESS SÉNÉGAL</h4>
 
                     <div
                       style={{
@@ -1272,9 +1340,9 @@ export default function AdminPage() {
                         width: "90px",
                         height: "90px",
                         borderRadius: "50%",
-                        border: "3px solid #FFFFFF",
+                        border: "3px solid var(--admin-border-light)",
                         overflow: "hidden",
-                        background: "#FFFFFF",
+                        background: "var(--admin-bg-light)",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1283,12 +1351,13 @@ export default function AdminPage() {
                       <i className="fas fa-user" style={{ fontSize: "3rem", color: "#64748B" }} />
                     </div>
 
-                    <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem", fontWeight: 800, color: "#FFFFFF" }}>{badgeName || "Nom du Titulaire"}</h3>
-                    <p style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", color: "rgba(255,255,255,0.85)" }}>{badgeOrg || "Organisation / Structure"}</p>
+                    <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem", fontWeight: 800, color: "var(--admin-text-main)" }}>{badgeName || "Nom du Titulaire"}</h3>
+                    <p style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>{badgeOrg || "Organisation / Structure"}</p>
 
                     <div
                       style={{
                         background: badgeAccessLevel.color,
+                        color: "#FFFFFF",
                         padding: "0.4rem 1rem",
                         borderRadius: "20px",
                         fontSize: "0.75rem",
@@ -1301,7 +1370,7 @@ export default function AdminPage() {
                       {badgeAccessLevel.value}
                     </div>
 
-                    <div style={{ background: "#FFFFFF", padding: "0.35rem", borderRadius: "8px" }}>
+                    <div style={{ background: "#FFFFFF", border: "1px solid var(--admin-border-light)", padding: "0.35rem", borderRadius: "8px" }}>
                       <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=CONESESS-DEMO" alt="QR Code" style={{ width: "70px", height: "70px", display: "block" }} />
                     </div>
                   </div>
@@ -1321,6 +1390,29 @@ export default function AdminPage() {
                   Saisissez ou scannez la référence du badge participant pour valider son accès.
                 </p>
 
+                <div style={{ marginBottom: "1.5rem" }}>
+                  <button
+                    onClick={cameraOn ? stopCamera : startCamera}
+                    className="action-btn-primary"
+                    style={{ width: "100%", justifyContent: "center", background: cameraOn ? "var(--admin-red)" : "var(--admin-navy)", marginBottom: "0.75rem" }}
+                  >
+                    <i className={`fas ${cameraOn ? "fa-video-slash" : "fa-camera"}`} /> {cameraOn ? "Arrêter la caméra" : "Activer la caméra"}
+                  </button>
+
+                  {cameraOn && (
+                    <video
+                      ref={videoRef}
+                      muted
+                      playsInline
+                      style={{ width: "100%", borderRadius: "12px", background: "#000000", marginBottom: "0.75rem" }}
+                    />
+                  )}
+
+                  {cameraError && (
+                    <p style={{ color: "var(--admin-red)", fontSize: "0.8rem", textAlign: "center", marginBottom: "0.75rem" }}>{cameraError}</p>
+                  )}
+                </div>
+
                 <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
                   <input
                     type="text"
@@ -1330,7 +1422,7 @@ export default function AdminPage() {
                     value={checkinCode}
                     onChange={(e) => setCheckinCode(e.target.value)}
                   />
-                  <button onClick={handleCheckin} className="action-btn-primary" style={{ background: "var(--admin-green)", fontSize: "0.9rem", padding: "0 1.25rem" }}>
+                  <button onClick={() => handleCheckin()} className="action-btn-primary" style={{ background: "var(--admin-green)", fontSize: "0.9rem", padding: "0 1.25rem" }}>
                     <i className="fas fa-check-circle" /> Vérifier
                   </button>
                 </div>

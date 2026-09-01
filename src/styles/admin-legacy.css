@@ -345,10 +345,11 @@
 .cr80-badge-preview {
   width: 320px;
   height: 480px;
-  background: linear-gradient(135deg, #0A2540 0%, #006837 100%);
+  background: #FFFFFF;
+  border: 1px solid var(--admin-border-light);
   border-radius: 18px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
-  color: #FFFFFF;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12);
+  color: var(--admin-text-main);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
