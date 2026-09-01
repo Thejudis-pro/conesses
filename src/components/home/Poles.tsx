@@ -74,17 +74,6 @@ export function Poles() {
               <p style={css("font-size: 0.835rem; color: var(--text-body); line-height: 1.5; margin: 0; flex-grow: 1;")}>{p.desc}</p>
             </div>
           ))}
-
-          <div
-            style={css(
-              "background: var(--bg-alt); border: 1px solid var(--border-light); border-left: 4px solid var(--primary-green); padding: 0.85rem 1.25rem; border-radius: var(--radius-md); text-align: center; max-width: 900px; margin: 0 auto 1.5rem auto;",
-            )}
-          >
-            <p style={css("font-size: 0.85rem; color: var(--text-dark); margin: 0; font-weight: 500;")}>
-              <i className="fas fa-plus-circle" style={{ color: "var(--primary-green)" }} /> D’autres pôles pourront être créés
-              en fonction de l’évolution de la base des membres et des besoins des filières.
-            </p>
-          </div>
         </div>
       </div>
     </section>
