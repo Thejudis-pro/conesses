@@ -14,6 +14,7 @@ import {
 } from "@/lib/adminData"
 import { buildGmailComposeUrl } from "@/lib/gmail"
 import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, type NewsPost } from "@/lib/news"
+import { downloadSubmissionReceipt } from "@/lib/pdfReceipt"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 import type { Tables } from "@/integrations/supabase/types"
 import "@/styles/admin-legacy.css"
@@ -75,6 +76,33 @@ const EmptyRow = ({ colSpan, children }: { colSpan: number; children: React.Reac
 
 const STATUS_BADGE_CLASS = (status: string) => (status === "Approuvé" ? "badge-green" : status === "Rejeté" ? "badge-navy" : "badge-gold")
 
+const webFormDetailText = (row: WebForm, key: string) => {
+  const v = (row.details as Record<string, unknown> | null)?.[key]
+  return typeof v === "string" || typeof v === "number" ? String(v) : ""
+}
+
+const handleDownloadWebForm = (row: WebForm) => {
+  downloadSubmissionReceipt({
+    formType: row.form_type,
+    reference: row.reference,
+    fields: [
+      { label: "Nom du Contact", value: row.contact_name ?? "" },
+      { label: "Organisation", value: row.org_name ?? "" },
+      { label: "E-mail", value: row.email ?? "" },
+      { label: "Téléphone", value: row.phone ?? "" },
+      { label: "Région", value: row.region ?? "" },
+      { label: "Département / Commune", value: webFormDetailText(row, "commune") },
+      { label: "Secteur d'activité", value: row.sector ?? "" },
+      { label: "Forme Juridique", value: row.legal_form ?? "" },
+      { label: "Poste Souhaité", value: row.role_wanted ?? "" },
+      { label: "Nombre de Membres / Salariés", value: webFormDetailText(row, "staff_count") },
+      { label: "Présentation de l'Organisation", value: webFormDetailText(row, "presentation") },
+      { label: "Message / Motivation", value: row.message ?? "" },
+      { label: "Statut", value: row.status },
+    ],
+  })
+}
+
 function ActionButtons({
   row,
   onView,
@@ -95,6 +123,9 @@ function ActionButtons({
           <i className="fas fa-eye" /> Voir
         </button>
       )}
+      <button onClick={() => handleDownloadWebForm(row)} className="btn-act btn-act-pdf" title="Télécharger le Formulaire (PDF)">
+        <i className="fas fa-file-pdf" /> Télécharger
+      </button>
       <button onClick={onApprove} className="btn-act btn-act-approve" title="Accepter et Valider">
         <i className="fas fa-check" /> Accepter
       </button>
@@ -158,11 +189,7 @@ function WebFormDetailModal({
   onReject: () => void
   onDelete: () => void
 }) {
-  const details = (row.details ?? {}) as Record<string, unknown>
-  const detailText = (key: string) => {
-    const v = details[key]
-    return typeof v === "string" || typeof v === "number" ? String(v) : ""
-  }
+  const detailText = (key: string) => webFormDetailText(row, key)
 
   return (
     <div className="modal-overlay show">
@@ -1038,6 +1065,7 @@ export default function AdminPage() {
                       <tr>
                         <th>Réf / Matricule</th>
                         <th>Structure</th>
+                        <th>Nom du Contact</th>
                         <th>Forme Juridique</th>
                         <th>Région</th>
                         <th>Téléphone</th>
@@ -1046,7 +1074,7 @@ export default function AdminPage() {
                     </thead>
                     <tbody>
                       {approvedMembers.length === 0 && members.length === 0 ? (
-                        <EmptyRow colSpan={6}>Aucune structure enregistrée. Les adhésions acceptées apparaîtront ici.</EmptyRow>
+                        <EmptyRow colSpan={7}>Aucune structure enregistrée. Les adhésions acceptées apparaîtront ici.</EmptyRow>
                       ) : (
                         <>
                           {approvedMembers.map((wf) => (
@@ -1057,6 +1085,7 @@ export default function AdminPage() {
                               <td>
                                 <strong>{wf.org_name}</strong>
                               </td>
+                              <td>{wf.contact_name}</td>
                               <td>{wf.legal_form}</td>
                               <td>{wf.region}</td>
                               <td>{wf.phone}</td>
@@ -1073,6 +1102,7 @@ export default function AdminPage() {
                               <td>
                                 <strong>{m.name}</strong>
                               </td>
+                              <td>—</td>
                               <td>{m.type}</td>
                               <td>{m.region}</td>
                               <td>{m.phone}</td>
