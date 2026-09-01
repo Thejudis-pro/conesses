@@ -113,7 +113,7 @@ export function IncubateurExplorer() {
           "background: #FFFFFF; border: 1px solid #C8E6C9; border-top: 4px solid #008748; padding: 1.5rem 1.75rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm);",
         )}
       >
-        <div className="incubator-detail-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+        <div className="incubator-detail-grid" style={{ gap: "1.5rem" }}>
           <div>
             <span
               className="badge"
