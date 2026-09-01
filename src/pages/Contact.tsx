@@ -1,4 +1,5 @@
 import { PublicLayout } from "@/components/layout/PublicLayout"
+import { buildGmailComposeUrl } from "@/lib/gmail"
 
 export default function ContactPage() {
   return (
@@ -127,7 +128,9 @@ export default function ContactPage() {
               <p style={{ color: "rgba(255, 255, 255, 0.75)", fontSize: "0.85rem", marginBottom: "1.25rem" }}>Courrier électronique officiel</p>
               <strong style={{ fontSize: "1.15rem", color: "#E9C46A", fontWeight: 800, display: "block", marginBottom: "1.25rem" }}>contact@conesess.sn</strong>
               <a
-                href="mailto:contact@conesess.sn"
+                href={buildGmailComposeUrl({ to: "contact@conesess.sn" })}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="btn"
                 style={{
                   background: "rgba(255,255,255,0.15)",

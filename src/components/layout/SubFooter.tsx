@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 import logo from "@/assets/images/logo.jpg"
+import { buildGmailComposeUrl } from "@/lib/gmail"
 import type { Page } from "./SiteHeader"
 
 interface FooterNavLink {
@@ -127,7 +128,7 @@ export function SubFooter({ page }: { page: Exclude<Page, "home"> }) {
             </p>
             <p style={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.88)", marginBottom: "0.65rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <i className="fas fa-envelope" style={{ color: "#E9C46A" }} />{" "}
-              <a href="mailto:contact@conesess.sn" style={{ color: "#FFFFFF", textDecoration: "none" }}>
+              <a href={buildGmailComposeUrl({ to: "contact@conesess.sn" })} target="_blank" rel="noopener noreferrer" style={{ color: "#FFFFFF", textDecoration: "none" }}>
                 contact@conesess.sn
               </a>
             </p>

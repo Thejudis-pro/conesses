@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import logo from "@/assets/images/logo.jpg"
 import { useToasts } from "@/components/Toast"
 import { ADHESION_TYPES, CANDIDATURE_TYPE, deleteWebForm, downloadCSV, fetchWebForms, updateWebFormStatus, webFormsToCSV } from "@/lib/adminData"
+import { buildGmailComposeUrl } from "@/lib/gmail"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 import type { Tables } from "@/integrations/supabase/types"
 import "@/styles/admin-legacy.css"
@@ -84,9 +85,13 @@ function ActionButtons({
         <a
           className="btn-act btn-act-email"
           title="Envoyer un E-mail"
-          href={`mailto:${row.email}?subject=${encodeURIComponent(`CONESESS - Suivi de votre Dossier ${row.reference}`)}&body=${encodeURIComponent(
-            `Bonjour ${row.contact_name ?? ""},\n\nNous avons bien reçu votre formulaire pour "${row.org_name ?? row.contact_name ?? ""}". Votre dossier (Réf: ${row.reference}) est en cours de traitement par le Secrétariat Général Confédéral.\n\nCordialement,\nLe CONESESS Sénégal`,
-          )}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          href={buildGmailComposeUrl({
+            to: row.email,
+            subject: `CONESESS - Suivi de votre Dossier ${row.reference}`,
+            body: `Bonjour ${row.contact_name ?? ""},\n\nNous avons bien reçu votre formulaire pour "${row.org_name ?? row.contact_name ?? ""}". Votre dossier (Réf: ${row.reference}) est en cours de traitement par le Secrétariat Général Confédéral.\n\nCordialement,\nLe CONESESS Sénégal`,
+          })}
         >
           <i className="fas fa-envelope" /> Mail
         </a>
