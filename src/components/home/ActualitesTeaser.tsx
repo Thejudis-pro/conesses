@@ -64,8 +64,8 @@ export function ActualitesTeaser() {
                   flexDirection: "column",
                 }}
               >
-                {post.image_url && (
-                  <img src={post.image_url} alt={post.title} style={{ width: "100%", height: "150px", objectFit: "cover" }} />
+                {post.image_urls[0] && (
+                  <img src={post.image_urls[0]} alt={post.title} style={{ width: "100%", height: "150px", objectFit: "cover" }} />
                 )}
                 <div style={{ padding: "1.25rem" }}>
                   <small style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>

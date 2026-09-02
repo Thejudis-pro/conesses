@@ -81,7 +81,16 @@ export default function ActualitesPage() {
                     boxShadow: "var(--shadow-sm)",
                   }}
                 >
-                  {post.image_url && <img src={post.image_url} alt={post.title} style={{ width: "100%", maxHeight: "360px", objectFit: "cover" }} />}
+                  {post.image_urls.length > 0 &&
+                    (post.image_urls.length === 1 ? (
+                      <img src={post.image_urls[0]} alt={post.title} style={{ width: "100%", maxHeight: "360px", objectFit: "cover" }} />
+                    ) : (
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "2px" }}>
+                        {post.image_urls.map((url, i) => (
+                          <img key={url} src={url} alt={`${post.title} ${i + 1}`} style={{ width: "100%", height: "180px", objectFit: "cover" }} />
+                        ))}
+                      </div>
+                    ))}
                   <div style={{ padding: "1.75rem" }}>
                     <small style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
                       {new Date(post.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}

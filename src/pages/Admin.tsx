@@ -14,7 +14,7 @@ import {
   type PendingAdminAccount,
 } from "@/lib/adminData"
 import { buildGmailComposeUrl } from "@/lib/gmail"
-import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, uploadNewsImage, type NewsPost } from "@/lib/news"
+import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, uploadNewsImages, type NewsPost } from "@/lib/news"
 import { downloadSubmissionReceipt } from "@/lib/pdfReceipt"
 import { useAdminAuth } from "@/lib/useAdminAuth"
 import type { Tables } from "@/integrations/supabase/types"
@@ -430,6 +430,8 @@ export default function AdminPage() {
   const [newsModalOpen, setNewsModalOpen] = useState(false)
   const [editingPost, setEditingPost] = useState<NewsPost | null>(null)
   const [newsSaving, setNewsSaving] = useState(false)
+  const [newsImages, setNewsImages] = useState<string[]>([])
+  const [newsImagesUploading, setNewsImagesUploading] = useState(false)
 
   // TODO(Supabase): manual additions to "Base de Données CONESESS" (badge
   // studio / check-in too) still use this local-only list — no
@@ -504,12 +506,23 @@ export default function AdminPage() {
 
   const openCreatePost = () => {
     setEditingPost(null)
+    setNewsImages([])
     setNewsModalOpen(true)
   }
 
   const openEditPost = (post: NewsPost) => {
     setEditingPost(post)
+    setNewsImages(post.image_urls ?? [])
     setNewsModalOpen(true)
+  }
+
+  const handleAddNewsImages = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    setNewsImagesUploading(true)
+    const { urls, error } = await uploadNewsImages(Array.from(files))
+    setNewsImagesUploading(false)
+    if (error) return showToast(`Erreur d'envoi de l'image : ${error}`)
+    setNewsImages((prev) => [...prev, ...urls])
   }
 
   const handleSaveNews = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -517,23 +530,11 @@ export default function AdminPage() {
     const form = e.currentTarget
     const title = (form.elements.namedItem("title") as HTMLInputElement).value.trim()
     const content = (form.elements.namedItem("content") as HTMLTextAreaElement).value.trim()
-    const imageFile = (form.elements.namedItem("image_file") as HTMLInputElement).files?.[0]
     const published = (form.elements.namedItem("published") as HTMLInputElement).checked
     if (!title || !content) return
 
     setNewsSaving(true)
-
-    let imageUrl = editingPost?.image_url ?? null
-    if (imageFile) {
-      const { url, error: uploadError } = await uploadNewsImage(imageFile)
-      if (uploadError) {
-        setNewsSaving(false)
-        return showToast(`Erreur d'envoi de l'image : ${uploadError}`)
-      }
-      imageUrl = url
-    }
-
-    const input = { title, content, image_url: imageUrl, published }
+    const input = { title, content, image_urls: newsImages, published }
     const err = editingPost ? await updateNewsPost(editingPost.id, input) : await createNewsPost(input)
     setNewsSaving(false)
 
@@ -1588,21 +1589,50 @@ export default function AdminPage() {
                 <textarea name="content" className="wizard-form-control" rows={6} required defaultValue={editingPost?.content ?? ""} placeholder="Texte de l'actualité..." />
               </div>
               <div className="wizard-form-group mb-3">
-                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Image (optionnel)</label>
-                {editingPost?.image_url && (
-                  <div style={{ marginBottom: "0.5rem" }}>
-                    <img src={editingPost.image_url} alt="" style={{ maxWidth: "160px", maxHeight: "100px", borderRadius: "8px", display: "block", marginBottom: "0.35rem" }} />
-                    <small style={{ color: "var(--admin-text-muted)" }}>Image actuelle — choisissez un fichier ci-dessous pour la remplacer.</small>
+                <label style={{ fontSize: "0.8rem", fontWeight: 600 }}>Images (optionnel, plusieurs possibles)</label>
+
+                {newsImages.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.6rem" }}>
+                    {newsImages.map((url) => (
+                      <div key={url} style={{ position: "relative" }}>
+                        <img src={url} alt="" style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "8px", display: "block", border: "1px solid var(--admin-border-light)" }} />
+                        <button
+                          type="button"
+                          onClick={() => setNewsImages((prev) => prev.filter((u) => u !== url))}
+                          title="Retirer cette image"
+                          style={{
+                            position: "absolute", top: "-6px", right: "-6px", width: "20px", height: "20px", borderRadius: "50%",
+                            background: "var(--admin-red)", color: "#FFFFFF", border: "2px solid var(--admin-card-bg-light)",
+                            fontSize: "0.7rem", lineHeight: 1, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+                          }}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 )}
-                <input type="file" name="image_file" accept="image/*" className="wizard-form-control" style={{ padding: "0.5rem" }} />
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="wizard-form-control"
+                  style={{ padding: "0.5rem" }}
+                  disabled={newsImagesUploading}
+                  onChange={(e) => {
+                    handleAddNewsImages(e.target.files)
+                    e.target.value = ""
+                  }}
+                />
+                {newsImagesUploading && <small style={{ color: "var(--admin-text-muted)" }}>Envoi en cours...</small>}
               </div>
               <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.85rem", fontWeight: 600, marginBottom: "1.25rem", cursor: "pointer" }}>
                 <input type="checkbox" name="published" defaultChecked={editingPost?.published ?? false} style={{ width: "auto" }} />
                 Publier immédiatement (visible sur le site public)
               </label>
               <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button type="submit" disabled={newsSaving} className="action-btn-primary" style={{ flex: 1, justifyContent: "center", background: "var(--admin-green)" }}>
+                <button type="submit" disabled={newsSaving || newsImagesUploading} className="action-btn-primary" style={{ flex: 1, justifyContent: "center", background: "var(--admin-green)" }}>
                   {newsSaving ? "Enregistrement..." : "Enregistrer"}
                 </button>
                 <button type="button" onClick={() => setNewsModalOpen(false)} className="action-btn-pill">
