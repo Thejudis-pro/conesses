@@ -7,11 +7,15 @@ import {
   CANDIDATURE_TYPE,
   deleteWebForm,
   downloadWebFormsExcel,
+  fetchAllAdminAccounts,
   fetchPendingAdminAccounts,
   fetchWebForms,
-  grantAdminRole,
+  grantRole,
+  revokeRole,
   updateWebFormStatus,
+  type AdminAccount,
   type PendingAdminAccount,
+  type StaffRole,
 } from "@/lib/adminData"
 import { buildGmailComposeUrl } from "@/lib/gmail"
 import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, uploadNewsImages, type NewsPost } from "@/lib/news"
@@ -58,17 +62,53 @@ const ACCESS_LEVELS = [
 
 const FREE_BADGE_LEVEL = ACCESS_LEVELS[ACCESS_LEVELS.length - 1]
 
-const NAV_ITEMS: { id: TabId; icon: string; label: string }[] = [
-  { id: "tab-dashboard", icon: "fas fa-chart-line", label: "Tableau de Bord" },
-  { id: "tab-web-forms", icon: "fas fa-inbox", label: "Réception Formulaires" },
-  { id: "tab-adhesions", icon: "fas fa-id-card", label: "Adhésions Membres" },
-  { id: "tab-steering", icon: "fas fa-users-cog", label: "Comité de Pilotage" },
-  { id: "tab-members", icon: "fas fa-database", label: "Base de Données CONESESS" },
-  { id: "tab-news", icon: "fas fa-newspaper", label: "Actualités" },
-  { id: "tab-badges", icon: "fas fa-id-badge", label: "Confection Badges CR80" },
-  { id: "tab-checkin", icon: "fas fa-qrcode", label: "Scanner Émargement" },
-  { id: "tab-admins", icon: "fas fa-user-shield", label: "Comptes Administrateurs" },
+interface NavItem {
+  id: TabId
+  icon: string
+  label: string
+  /** Visible to checkin_agent-only accounts (who see nothing else). */
+  checkinAgentVisible?: boolean
+  /** Visible only to super_admin, regardless of general admin access. */
+  superAdminOnly?: boolean
+}
+
+const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
+  {
+    title: "SUPERVISION CENTRALISÉE",
+    items: [
+      { id: "tab-dashboard", icon: "fas fa-chart-line", label: "Tableau de Bord" },
+      { id: "tab-web-forms", icon: "fas fa-inbox", label: "Réception Formulaires" },
+    ],
+  },
+  {
+    title: "REGISTRES & DOSSIERS",
+    items: [
+      { id: "tab-adhesions", icon: "fas fa-id-card", label: "Adhésions Membres" },
+      { id: "tab-steering", icon: "fas fa-users-cog", label: "Comité de Pilotage" },
+      { id: "tab-members", icon: "fas fa-database", label: "Base de Données CONESESS" },
+      { id: "tab-news", icon: "fas fa-newspaper", label: "Actualités" },
+    ],
+  },
+  {
+    title: "STUDIO BADGES & ÉMARGEMENT",
+    items: [
+      { id: "tab-badges", icon: "fas fa-id-badge", label: "Confection Badges CR80", checkinAgentVisible: true },
+      { id: "tab-checkin", icon: "fas fa-qrcode", label: "Scanner Émargement", checkinAgentVisible: true },
+    ],
+  },
+  {
+    title: "PARAMÈTRES & ACCÈS",
+    items: [{ id: "tab-admins", icon: "fas fa-user-shield", label: "Comptes Administrateurs", superAdminOnly: true }],
+  },
 ]
+
+const STAFF_ROLES: StaffRole[] = ["admin", "checkin_agent", "super_admin"]
+
+const ROLE_LABELS: Record<StaffRole, string> = {
+  admin: "Admin Général",
+  checkin_agent: "Agent Check-in",
+  super_admin: "Super Admin",
+}
 
 const EmptyRow = ({ colSpan, children }: { colSpan: number; children: React.ReactNode }) => (
   <tr>
@@ -404,7 +444,8 @@ function AdminLoginGate({
 }
 
 export default function AdminPage() {
-  const { loading: authLoading, session, isAdmin, authError: rawAuthError, signIn, signUp, signOut } = useAdminAuth()
+  const { loading: authLoading, session, isAdmin, isSuperAdmin, isCheckinAgent, authError: rawAuthError, signIn, signUp, signOut } = useAdminAuth()
+  const checkinOnly = isCheckinAgent && !isAdmin
   const [loginError, setLoginError] = useState<string | null>(null)
 
   const [activeTab, setActiveTab] = useState<TabId>("tab-dashboard")
@@ -423,6 +464,12 @@ export default function AdminPage() {
   const [pendingAccountsLoading, setPendingAccountsLoading] = useState(false)
   const [pendingAccountsError, setPendingAccountsError] = useState<string | null>(null)
   const [grantingId, setGrantingId] = useState<string | null>(null)
+  const [pendingRoleChoice, setPendingRoleChoice] = useState<Record<string, StaffRole>>({})
+
+  const [allAdmins, setAllAdmins] = useState<AdminAccount[]>([])
+  const [allAdminsLoading, setAllAdminsLoading] = useState(false)
+  const [allAdminsError, setAllAdminsError] = useState<string | null>(null)
+  const [revokingKey, setRevokingKey] = useState<string | null>(null)
 
   const [newsPosts, setNewsPosts] = useState<NewsPost[]>([])
   const [newsLoading, setNewsLoading] = useState(false)
@@ -475,6 +522,18 @@ export default function AdminPage() {
     setPendingAccounts(data)
   }
 
+  const loadAllAdmins = async () => {
+    setAllAdminsLoading(true)
+    const { data, error } = await fetchAllAdminAccounts()
+    setAllAdminsLoading(false)
+    if (error) {
+      setAllAdminsError(error)
+      return
+    }
+    setAllAdminsError(null)
+    setAllAdmins(data)
+  }
+
   const loadNews = async () => {
     setNewsLoading(true)
     const { data, error } = await fetchAllNewsAdmin()
@@ -490,18 +549,39 @@ export default function AdminPage() {
   useEffect(() => {
     if (session && isAdmin) {
       loadWebForms()
-      loadPendingAccounts()
       loadNews()
     }
-  }, [session, isAdmin])
+    if (session && isSuperAdmin) {
+      loadPendingAccounts()
+      loadAllAdmins()
+    }
+  }, [session, isAdmin, isSuperAdmin])
 
-  const handleGrantAdmin = async (account: PendingAdminAccount) => {
+  // Checkin-only agents have nothing to see on the dashboard — land them
+  // straight on the badge studio instead.
+  useEffect(() => {
+    if (checkinOnly) setActiveTab("tab-badges")
+  }, [checkinOnly])
+
+  const handleGrantRole = async (account: PendingAdminAccount) => {
+    const role = pendingRoleChoice[account.id] ?? "admin"
     setGrantingId(account.id)
-    const err = await grantAdminRole(account.id)
+    const err = await grantRole(account.id, role)
     setGrantingId(null)
     if (err) return showToast(`Erreur : ${err}`)
-    showToast(`✅ Rôle administrateur accordé à ${account.email}.`)
+    showToast(`✅ Rôle « ${ROLE_LABELS[role]} » accordé à ${account.email}.`)
     loadPendingAccounts()
+    loadAllAdmins()
+  }
+
+  const handleRevokeRole = async (account: AdminAccount) => {
+    if (!window.confirm(`Retirer le rôle « ${ROLE_LABELS[account.role]} » à ${account.email} ?`)) return
+    setRevokingKey(`${account.id}:${account.role}`)
+    const err = await revokeRole(account.id, account.role)
+    setRevokingKey(null)
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast(`Rôle retiré à ${account.email}.`)
+    loadAllAdmins()
   }
 
   const openCreatePost = () => {
@@ -695,11 +775,11 @@ export default function AdminPage() {
     return <AdminLoginGate authError={loginError} loading={authLoading} onSignIn={handleSignIn} onSignUp={signUp} />
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isCheckinAgent) {
     return (
       <div className="admin-app-body" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", gap: "1rem", padding: "1rem" }}>
         <i className="fas fa-lock" style={{ fontSize: "2.5rem", color: "var(--admin-red)" }} />
-        <p style={{ color: "var(--admin-text-main)", fontWeight: 600 }}>Ce compte n'a pas le rôle administrateur.</p>
+        <p style={{ color: "var(--admin-text-main)", fontWeight: 600 }}>Ce compte n'a pas de rôle administrateur.</p>
         <button onClick={signOut} className="action-btn-pill">
           Se déconnecter
         </button>
@@ -728,33 +808,24 @@ export default function AdminPage() {
           </div>
 
           <nav className="admin-nav-menu">
-            <div className="admin-nav-section-title">SUPERVISION CENTRALISÉE</div>
-            {NAV_ITEMS.slice(0, 2).map((item) => (
-              <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
-                <i className={item.icon} /> <span>{item.label}</span>
-              </a>
-            ))}
-
-            <div className="admin-nav-section-title">REGISTRES & DOSSIERS</div>
-            {NAV_ITEMS.slice(2, 6).map((item) => (
-              <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
-                <i className={item.icon} /> <span>{item.label}</span>
-              </a>
-            ))}
-
-            <div className="admin-nav-section-title">STUDIO BADGES & ÉMARGEMENT</div>
-            {NAV_ITEMS.slice(6, 8).map((item) => (
-              <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
-                <i className={item.icon} /> <span>{item.label}</span>
-              </a>
-            ))}
-
-            <div className="admin-nav-section-title">PARAMÈTRES & ACCÈS</div>
-            {NAV_ITEMS.slice(8, 9).map((item) => (
-              <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
-                <i className={item.icon} /> <span>{item.label}</span>
-              </a>
-            ))}
+            {NAV_GROUPS.map((group) => {
+              const items = group.items.filter((item) => {
+                if (checkinOnly) return item.checkinAgentVisible
+                if (item.superAdminOnly) return isSuperAdmin
+                return true
+              })
+              if (items.length === 0) return null
+              return (
+                <div key={group.title}>
+                  <div className="admin-nav-section-title">{group.title}</div>
+                  {items.map((item) => (
+                    <a key={item.id} className={`admin-nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => switchTab(item.id)}>
+                      <i className={item.icon} /> <span>{item.label}</span>
+                    </a>
+                  ))}
+                </div>
+              )
+            })}
           </nav>
 
           <div className="admin-sidebar-footer">
@@ -781,16 +852,18 @@ export default function AdminPage() {
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.65rem", flexWrap: "wrap" }}>
-              <button onClick={loadWebForms} className="action-btn-primary" style={{ background: "var(--admin-green)", color: "#FFFFFF", fontSize: "0.8rem", border: "none", padding: "0.55rem 0.9rem" }}>
-                <i className="fas fa-sync-alt" /> Actualiser Flux
-              </button>
+              {!checkinOnly && (
+                <button onClick={loadWebForms} className="action-btn-primary" style={{ background: "var(--admin-green)", color: "#FFFFFF", fontSize: "0.8rem", border: "none", padding: "0.55rem 0.9rem" }}>
+                  <i className="fas fa-sync-alt" /> Actualiser Flux
+                </button>
+              )}
               <button onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))} className="action-btn-pill" style={{ fontSize: "0.8rem", border: "1px solid var(--admin-border-light)" }}>
                 <i className="fas fa-adjust" /> Thème
               </button>
             </div>
           </header>
 
-          {webFormsError && (
+          {webFormsError && !checkinOnly && (
             <div style={{ background: "var(--admin-soft-red)", border: "1px solid var(--admin-red)", color: "var(--admin-red)", padding: "1rem 1.25rem", borderRadius: "12px", marginBottom: "1.5rem" }}>
               Erreur de chargement des formulaires : {webFormsError}
             </div>
@@ -1497,7 +1570,7 @@ export default function AdminPage() {
                       <i className="fas fa-user-shield" style={{ color: "var(--admin-green)" }} /> Comptes en Attente de Validation
                     </h3>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
-                      Comptes créés via « Créer un compte » sur la page de connexion, qui n'ont pas encore le rôle administrateur. Session active :{" "}
+                      Comptes créés via « Créer un compte » sur la page de connexion, qui n'ont encore aucun rôle. Session active :{" "}
                       <strong>{session.user.email}</strong>.
                     </p>
                   </div>
@@ -1519,7 +1592,7 @@ export default function AdminPage() {
                         <th>E-mail</th>
                         <th>Créé le</th>
                         <th>E-mail Confirmé</th>
-                        <th>Action</th>
+                        <th style={{ minWidth: "300px" }}>Attribuer un rôle</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1540,13 +1613,93 @@ export default function AdminPage() {
                               </span>
                             </td>
                             <td>
+                              <div style={{ display: "flex", gap: "0.4rem" }}>
+                                <select
+                                  className="wizard-form-control"
+                                  style={{ height: "36px", fontSize: "0.8rem", minWidth: "150px" }}
+                                  value={pendingRoleChoice[acc.id] ?? "admin"}
+                                  onChange={(e) => setPendingRoleChoice((prev) => ({ ...prev, [acc.id]: e.target.value as StaffRole }))}
+                                >
+                                  {STAFF_ROLES.map((r) => (
+                                    <option key={r} value={r}>
+                                      {ROLE_LABELS[r]}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  onClick={() => handleGrantRole(acc)}
+                                  disabled={grantingId === acc.id}
+                                  className="btn-act btn-act-approve"
+                                  title="Attribuer ce rôle"
+                                >
+                                  <i className="fas fa-user-check" /> {grantingId === acc.id ? "..." : "Attribuer"}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="admin-table-card">
+                <div className="table-header-toolbar">
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
+                      <i className="fas fa-users-cog" style={{ color: "var(--admin-green)" }} /> Tous les Administrateurs
+                    </h3>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
+                      Comptes avec accès à l'espace administrateur, tous rôles confondus.
+                    </p>
+                  </div>
+                  <button onClick={loadAllAdmins} className="action-btn-pill" style={{ fontSize: "0.8rem" }}>
+                    <i className="fas fa-sync-alt" /> Actualiser
+                  </button>
+                </div>
+
+                {allAdminsError && (
+                  <div style={{ background: "var(--admin-soft-red)", border: "1px solid var(--admin-red)", color: "var(--admin-red)", padding: "1rem 1.25rem", borderRadius: "12px", marginBottom: "1.25rem" }}>
+                    Erreur de chargement : {allAdminsError}
+                  </div>
+                )}
+
+                <div className="admin-table-container">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>E-mail</th>
+                        <th>Rôle</th>
+                        <th>Attribué le</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allAdminsLoading ? (
+                        <EmptyRow colSpan={4}>Chargement...</EmptyRow>
+                      ) : allAdmins.length === 0 ? (
+                        <EmptyRow colSpan={4}>Aucun administrateur enregistré.</EmptyRow>
+                      ) : (
+                        allAdmins.map((acc) => (
+                          <tr key={`${acc.id}:${acc.role}`}>
+                            <td>
+                              <strong>{acc.email}</strong>
+                            </td>
+                            <td>
+                              <span className={`badge ${acc.role === "super_admin" ? "badge-gold" : acc.role === "checkin_agent" ? "badge-navy" : "badge-green"}`}>
+                                {ROLE_LABELS[acc.role]}
+                              </span>
+                            </td>
+                            <td>{new Date(acc.granted_at).toLocaleDateString("fr-FR")}</td>
+                            <td>
                               <button
-                                onClick={() => handleGrantAdmin(acc)}
-                                disabled={grantingId === acc.id}
-                                className="btn-act btn-act-approve"
-                                title="Accorder le rôle Administrateur"
+                                onClick={() => handleRevokeRole(acc)}
+                                disabled={revokingKey === `${acc.id}:${acc.role}` || (acc.role === "super_admin" && acc.email === session.user.email)}
+                                className="btn-act btn-act-delete"
+                                title={acc.role === "super_admin" && acc.email === session.user.email ? "Vous ne pouvez pas retirer votre propre rôle Super Admin" : "Retirer ce rôle"}
                               >
-                                <i className="fas fa-user-check" /> {grantingId === acc.id ? "..." : "Accorder l'accès Admin"}
+                                <i className="fas fa-user-slash" /> {revokingKey === `${acc.id}:${acc.role}` ? "..." : "Retirer"}
                               </button>
                             </td>
                           </tr>

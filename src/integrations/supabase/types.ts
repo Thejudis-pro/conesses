@@ -124,7 +124,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      grant_admin_role: { Args: { target_user_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -141,9 +140,32 @@ export type Database = {
           id: string
         }[]
       }
+      list_all_admin_accounts: {
+        Args: never
+        Returns: {
+          id: string
+          email: string
+          role: Database["public"]["Enums"]["app_role"]
+          granted_at: string
+        }[]
+      }
+      grant_role: {
+        Args: {
+          target_user_id: string
+          new_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: undefined
+      }
+      revoke_role: {
+        Args: {
+          target_user_id: string
+          target_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: undefined
+      }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "super_admin" | "checkin_agent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -271,7 +293,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "super_admin", "checkin_agent"],
     },
   },
 } as const

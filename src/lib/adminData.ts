@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client"
-import type { Tables } from "@/integrations/supabase/types"
+import type { Enums, Tables } from "@/integrations/supabase/types"
+
+/** The three roles grantable through the admin UI (excludes legacy 'moderator'/'user'). */
+export type StaffRole = Extract<Enums<"app_role">, "admin" | "super_admin" | "checkin_agent">
 
 export type WebForm = Tables<"web_forms">
 
@@ -87,8 +90,29 @@ export async function fetchPendingAdminAccounts(): Promise<{ data: PendingAdminA
   return { data: data ?? [], error: null }
 }
 
-export async function grantAdminRole(targetUserId: string): Promise<string | null> {
-  const { error } = await supabase.rpc("grant_admin_role", { target_user_id: targetUserId })
+export interface AdminAccount {
+  id: string
+  email: string
+  role: StaffRole
+  granted_at: string
+}
+
+/** Super-admin only: every account currently holding a staff role. */
+export async function fetchAllAdminAccounts(): Promise<{ data: AdminAccount[]; error: string | null }> {
+  const { data, error } = await supabase.rpc("list_all_admin_accounts")
+  if (error) return { data: [], error: error.message }
+  return { data: (data ?? []) as AdminAccount[], error: null }
+}
+
+/** Super-admin only: grants a role (admin / super_admin / checkin_agent) to an account. */
+export async function grantRole(targetUserId: string, role: StaffRole): Promise<string | null> {
+  const { error } = await supabase.rpc("grant_role", { target_user_id: targetUserId, new_role: role })
+  return error?.message ?? null
+}
+
+/** Super-admin only: removes a specific role from an account. */
+export async function revokeRole(targetUserId: string, role: StaffRole): Promise<string | null> {
+  const { error } = await supabase.rpc("revoke_role", { target_user_id: targetUserId, target_role: role })
   return error?.message ?? null
 }
 
