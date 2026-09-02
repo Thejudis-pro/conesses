@@ -19,6 +19,15 @@ export async function fetchAllNewsAdmin(): Promise<{ data: NewsPost[]; error: st
   return { data: data ?? [], error: null }
 }
 
+/** Public: a single published post by id, for the detail page. */
+export async function fetchPublishedNewsById(id: string): Promise<{ data: NewsPost | null; error: string | null }> {
+  const { data, error } = await supabase.from("news_posts").select("*").eq("id", id).eq("published", true).maybeSingle()
+  if (error) return { data: null, error: error.message }
+  return { data: data ?? null, error: null }
+}
+
+export const newsExcerpt = (text: string, max = 140) => (text.length > max ? `${text.slice(0, max).trim()}…` : text)
+
 /** Uploads a single image file to the public `news-images` bucket and returns its public URL. */
 export async function uploadNewsImage(file: File): Promise<{ url: string | null; error: string | null }> {
   const ext = file.name.split(".").pop() ?? "jpg"

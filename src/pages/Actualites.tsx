@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { PublicLayout } from "@/components/layout/PublicLayout"
-import { fetchPublishedNews, type NewsPost } from "@/lib/news"
+import { fetchPublishedNews, newsExcerpt, type NewsPost } from "@/lib/news"
 
 export default function ActualitesPage() {
   const [posts, setPosts] = useState<NewsPost[]>([])
@@ -47,7 +48,7 @@ export default function ActualitesPage() {
       </section>
 
       <section className="section" style={{ background: "var(--bg-surface)", padding: "3rem 0 3.5rem 0" }}>
-        <div className="container" style={{ maxWidth: "900px" }}>
+        <div className="container" style={{ maxWidth: "1100px" }}>
           {loading ? (
             <p style={{ textAlign: "center", color: "var(--text-muted)" }}>Chargement...</p>
           ) : posts.length === 0 ? (
@@ -69,36 +70,46 @@ export default function ActualitesPage() {
               </p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.75rem" }}>
               {posts.map((post) => (
-                <article
+                <Link
                   key={post.id}
+                  to={`/actualites/${post.id}`}
                   style={{
+                    textDecoration: "none",
                     background: "#FFFFFF",
                     border: "1px solid var(--border-light)",
                     borderRadius: "var(--radius-lg)",
                     overflow: "hidden",
                     boxShadow: "var(--shadow-sm)",
+                    display: "flex",
+                    flexDirection: "column",
+                    transition: "var(--transition)",
                   }}
+                  className="news-card"
                 >
-                  {post.image_urls.length > 0 &&
-                    (post.image_urls.length === 1 ? (
-                      <img src={post.image_urls[0]} alt={post.title} style={{ width: "100%", maxHeight: "360px", objectFit: "cover" }} />
+                  <div style={{ width: "100%", height: "190px", background: "var(--bg-alt)", overflow: "hidden" }}>
+                    {post.image_urls[0] ? (
+                      <img src={post.image_urls[0]} alt={post.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                     ) : (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "2px" }}>
-                        {post.image_urls.map((url, i) => (
-                          <img key={url} src={url} alt={`${post.title} ${i + 1}`} style={{ width: "100%", height: "180px", objectFit: "cover" }} />
-                        ))}
+                      <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <i className="fas fa-newspaper" style={{ fontSize: "2rem", color: "var(--border-light)" }} />
                       </div>
-                    ))}
-                  <div style={{ padding: "1.75rem" }}>
+                    )}
+                  </div>
+                  <div style={{ padding: "1.5rem", flex: 1, display: "flex", flexDirection: "column" }}>
                     <small style={{ color: "var(--text-muted)", fontSize: "0.8rem" }}>
                       {new Date(post.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
                     </small>
-                    <h2 style={{ color: "var(--primary-navy)", fontSize: "1.4rem", fontWeight: 800, margin: "0.4rem 0 0.85rem 0" }}>{post.title}</h2>
-                    <p style={{ color: "var(--text-body)", fontSize: "0.95rem", lineHeight: 1.65, margin: 0, whiteSpace: "pre-wrap" }}>{post.content}</p>
+                    <h2 style={{ color: "var(--primary-navy)", fontSize: "1.15rem", fontWeight: 800, margin: "0.4rem 0 0.6rem 0", lineHeight: 1.35 }}>
+                      {post.title}
+                    </h2>
+                    <p style={{ color: "var(--text-muted)", fontSize: "0.875rem", lineHeight: 1.55, margin: 0, flex: 1 }}>{newsExcerpt(post.content)}</p>
+                    <span style={{ color: "var(--primary-green)", fontSize: "0.85rem", fontWeight: 700, marginTop: "1rem", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                      Lire la suite <i className="fas fa-arrow-right" />
+                    </span>
                   </div>
-                </article>
+                </Link>
               ))}
             </div>
           )}

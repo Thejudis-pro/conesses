@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom"
+import ActualiteDetailPage from "@/pages/ActualiteDetail"
 import ActualitesPage from "@/pages/Actualites"
 import AdhesionPage from "@/pages/Adhesion"
 import AdminPage from "@/pages/Admin"
@@ -13,6 +14,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<IndexPage />} />
       <Route path="/actualites" element={<ActualitesPage />} />
+      <Route path="/actualites/:id" element={<ActualiteDetailPage />} />
       <Route path="/gouvernance" element={<GouvernancePage />} />
       <Route path="/poles-action" element={<PolesActionPage />} />
       <Route path="/adhesion" element={<AdhesionPage />} />

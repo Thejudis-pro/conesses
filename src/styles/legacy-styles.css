@@ -116,6 +116,11 @@ section.section {
   overflow-x: hidden;
 }
 
+.news-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
 /* Badge Utility */
 .badge {
   display: inline-flex;

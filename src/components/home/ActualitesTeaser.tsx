@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
-import { fetchPublishedNews, type NewsPost } from "@/lib/news"
-
-const excerpt = (text: string, max = 140) => (text.length > max ? `${text.slice(0, max).trim()}…` : text)
+import { fetchPublishedNews, newsExcerpt, type NewsPost } from "@/lib/news"
 
 export function ActualitesTeaser() {
   const [posts, setPosts] = useState<NewsPost[]>([])
@@ -52,7 +50,8 @@ export function ActualitesTeaser() {
             {posts.map((post) => (
               <Link
                 key={post.id}
-                to="/actualites"
+                to={`/actualites/${post.id}`}
+                className="news-card"
                 style={{
                   textDecoration: "none",
                   background: "#FFFFFF",
@@ -62,6 +61,7 @@ export function ActualitesTeaser() {
                   boxShadow: "var(--shadow-sm)",
                   display: "flex",
                   flexDirection: "column",
+                  transition: "var(--transition)",
                 }}
               >
                 {post.image_urls[0] && (
@@ -74,7 +74,7 @@ export function ActualitesTeaser() {
                   <h3 style={{ color: "var(--primary-navy)", fontSize: "1.05rem", fontWeight: 700, margin: "0.35rem 0 0.5rem 0", lineHeight: 1.35 }}>
                     {post.title}
                   </h3>
-                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", lineHeight: 1.5, margin: 0 }}>{excerpt(post.content)}</p>
+                  <p style={{ color: "var(--text-muted)", fontSize: "0.85rem", lineHeight: 1.5, margin: 0 }}>{newsExcerpt(post.content)}</p>
                 </div>
               </Link>
             ))}
