@@ -455,16 +455,27 @@
 }
 
 @media print {
-  body * {
-    visibility: hidden !important;
+  /* Hide everything except the badge itself. Deliberately NOT a
+     visibility:hidden + position:fixed overlay trick — Chrome's print
+     engine repeats position:fixed elements on every generated page,
+     which is what caused the badge (and a stray sidebar counter) to
+     print multiple times. display:none removes them from the render
+     tree entirely, so there's nothing left to duplicate. */
+  .admin-sidebar,
+  .admin-top-bar,
+  .mobile-admin-toggle,
+  .no-print {
+    display: none !important;
   }
-  .badge-print-area,
-  .badge-print-area * {
-    visibility: visible !important;
+  .admin-viewport {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
   }
   .badge-print-area {
-    position: fixed !important;
-    inset: 0 !important;
+    display: flex !important;
+    width: 150mm !important;
+    height: 105mm !important;
     margin: 0 !important;
     padding: 0 !important;
   }
@@ -476,6 +487,9 @@
     box-shadow: none !important;
     border-radius: 0 !important;
     border: none !important;
+    overflow: hidden !important;
+    page-break-after: avoid !important;
+    page-break-inside: avoid !important;
   }
   .badge-logo {
     width: 34px !important;

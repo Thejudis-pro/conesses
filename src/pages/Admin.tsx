@@ -1359,7 +1359,7 @@ export default function AdminPage() {
           {activeTab === "tab-badges" && (
             <section className="admin-tab-content">
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "2rem" }}>
-                <div className="admin-table-card" style={{ margin: 0 }}>
+                <div className="admin-table-card no-print" style={{ margin: 0 }}>
                   <h3 style={{ margin: "0 0 1.25rem 0", fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
                     <i className="fas fa-id-badge" style={{ color: "var(--admin-green)" }} /> Confection de Badge CR80
                   </h3>
