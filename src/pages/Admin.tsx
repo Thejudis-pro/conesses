@@ -52,12 +52,12 @@ const REGIONS = [
 ]
 
 const ACCESS_LEVELS = [
-  { value: "VIP / Bureau Exécutif", label: "🥇 VIP / Bureau Exécutif (Doré)", color: "#D97706" },
-  { value: "Membre Titulaire", label: "🌿 Membre Titulaire (Vert Émeraude)", color: "#006837" },
-  { value: "Comité de Pilotage", label: "🏛️ Comité de Pilotage (Bleu Roi)", color: "#0A2540" },
-  { value: "Invité d'Honneur", label: "🟣 Invité d'Honneur (Violet Impérial)", color: "#7C3AED" },
-  { value: "Presse / Média", label: "🔴 Presse / Média (Rouge Cramoisi)", color: "#DC2626" },
-  { value: "Badge Gratuit", label: "🎫 Badge Gratuit (Accès Libre)", color: "#64748B" },
+  { value: "VIP / Bureau Exécutif", label: "🥇 VIP / Bureau Exécutif (Doré)", color: "#D97706", icon: "fa-crown" },
+  { value: "Membre Titulaire", label: "🌿 Membre Titulaire (Vert Émeraude)", color: "#006837", icon: "fa-leaf" },
+  { value: "Comité de Pilotage", label: "🏛️ Comité de Pilotage (Bleu Roi)", color: "#0A2540", icon: "fa-landmark" },
+  { value: "Invité d'Honneur", label: "🟣 Invité d'Honneur (Violet Impérial)", color: "#7C3AED", icon: "fa-star" },
+  { value: "Presse / Média", label: "🔴 Presse / Média (Rouge Cramoisi)", color: "#DC2626", icon: "fa-camera" },
+  { value: "Badge Gratuit", label: "🎫 Badge Gratuit (Accès Libre)", color: "#64748B", icon: "fa-ticket-alt" },
 ]
 
 const FREE_BADGE_LEVEL = ACCESS_LEVELS[ACCESS_LEVELS.length - 1]
@@ -1429,53 +1429,91 @@ export default function AdminPage() {
                 </div>
 
                 <div className="badge-print-area" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <div className="cr80-badge-preview">
-                    <div className="badge-access-band" style={{ background: badgeAccessLevel.color }} />
-
-                    <img className="badge-logo" src={logo} alt="Logo CONESESS" style={{ width: "50px", height: "50px", borderRadius: "50%", border: "2px solid #D97706", marginTop: "1rem", marginBottom: "0.5rem" }} />
-                    <h4 className="badge-org-title" style={{ margin: 0, fontSize: "0.9rem", letterSpacing: "0.05em", color: "var(--admin-text-main)" }}>CONESESS SÉNÉGAL</h4>
-
+                  <div className="cr80-badge-preview" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
+                    {/* Gradient header band, tinted with the chosen access level's color */}
                     <div
-                      className="badge-avatar"
+                      className="badge-header-band"
                       style={{
-                        margin: "1.5rem 0 1rem 0",
-                        width: "90px",
-                        height: "90px",
-                        borderRadius: "50%",
-                        border: "3px solid var(--admin-border-light)",
-                        overflow: "hidden",
-                        background: "var(--admin-bg-light)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        background: `linear-gradient(135deg, #0A2540 0%, ${badgeAccessLevel.color} 130%)`,
+                        padding: "1.5rem 1rem 3rem 1rem",
+                        textAlign: "center",
                       }}
                     >
-                      <i className="fas fa-user" style={{ fontSize: "3rem", color: "#64748B" }} />
+                      <img
+                        className="badge-logo"
+                        src={logo}
+                        alt="Logo CONESESS"
+                        style={{ width: "54px", height: "54px", borderRadius: "50%", border: "3px solid #FFFFFF", background: "#FFFFFF", boxShadow: "0 4px 10px rgba(0,0,0,0.25)" }}
+                      />
+                      <h4 className="badge-org-title" style={{ margin: "0.6rem 0 0 0", fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.07em", color: "#FFFFFF" }}>
+                        CONESESS SÉNÉGAL
+                      </h4>
                     </div>
 
-                    <h3 className="badge-name" style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem", fontWeight: 800, color: "var(--admin-text-main)" }}>{badgeName || "Nom du Titulaire"}</h3>
-                    <p className="badge-org" style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>{badgeOrg || "Organisation / Structure"}</p>
-
-                    <div
-                      className="badge-pill"
-                      style={{
-                        background: badgeAccessLevel.color,
-                        color: "#FFFFFF",
-                        padding: "0.4rem 1rem",
-                        borderRadius: "20px",
-                        fontSize: "0.75rem",
-                        fontWeight: 800,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        marginBottom: "1rem",
-                      }}
-                    >
-                      {badgeAccessLevel.value}
+                    {/* Avatar overlapping the header/body seam for a layered card look */}
+                    <div style={{ marginTop: "-46px", display: "flex", justifyContent: "center" }}>
+                      <div
+                        className="badge-avatar"
+                        style={{
+                          width: "92px",
+                          height: "92px",
+                          borderRadius: "50%",
+                          border: `4px solid ${badgeAccessLevel.color}`,
+                          background: "#FFFFFF",
+                          boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <i className="fas fa-user" style={{ fontSize: "2.6rem", color: "#94A3B8" }} />
+                      </div>
                     </div>
 
-                    <div className="badge-qr-wrap" style={{ background: "#FFFFFF", border: "1px solid var(--admin-border-light)", padding: "0.35rem", borderRadius: "8px" }}>
-                      <img className="badge-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=CONESESS-DEMO" alt="QR Code" style={{ width: "70px", height: "70px", display: "block" }} />
+                    <div style={{ padding: "0.75rem 1.25rem 1.5rem 1.25rem", textAlign: "center" }}>
+                      <h3 className="badge-name" style={{ margin: "0 0 0.15rem 0", fontSize: "1.2rem", fontWeight: 800, color: "#0A2540" }}>
+                        {badgeName || "Nom du Titulaire"}
+                      </h3>
+                      <p className="badge-org" style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", fontWeight: 600, color: "#64748B" }}>
+                        {badgeOrg || "Organisation / Structure"}
+                      </p>
+
+                      <div
+                        className="badge-pill"
+                        style={{
+                          display: "flex",
+                          width: "fit-content",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.4rem",
+                          margin: "0 auto 1.25rem auto",
+                          background: badgeAccessLevel.color,
+                          color: "#FFFFFF",
+                          padding: "0.45rem 1.1rem",
+                          borderRadius: "20px",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          boxShadow: `0 4px 10px ${badgeAccessLevel.color}55`,
+                        }}
+                      >
+                        <i className={`fas ${badgeAccessLevel.icon}`} /> {badgeAccessLevel.value}
+                      </div>
+
+                      <div
+                        className="badge-qr-wrap"
+                        style={{ background: "#FFFFFF", border: `2px solid ${badgeAccessLevel.color}33`, padding: "0.5rem", borderRadius: "12px", width: "fit-content", margin: "0 auto", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+                      >
+                        <img className="badge-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=CONESESS-DEMO" alt="QR Code" style={{ width: "80px", height: "80px", display: "block" }} />
+                      </div>
+                      <p style={{ margin: "0.6rem 0 0 0", fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#94A3B8" }}>
+                        Scanner pour vérifier
+                      </p>
                     </div>
+
+                    {/* Bottom accent bar, matching the header tint */}
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "8px", background: badgeAccessLevel.color }} />
                   </div>
                 </div>
               </div>

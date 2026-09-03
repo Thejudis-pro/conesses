@@ -359,14 +359,6 @@
   margin: 0 auto;
 }
 
-.badge-access-band {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 12px;
-  border-top-left-radius: 18px;
-  border-top-right-radius: 18px;
-}
-
 @media (max-width: 991.98px) {
   .admin-sidebar {
     transform: translateX(-100%);
@@ -483,12 +475,17 @@
     width: 105mm !important;
     height: 150mm !important;
     margin: 0 !important;
-    padding: 1rem 0.75rem !important;
+    padding: 0 !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     border: none !important;
     overflow: hidden !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
+  }
+  .cr80-badge-preview,
+  .cr80-badge-preview * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
