@@ -1428,14 +1428,15 @@ export default function AdminPage() {
                   </button>
                 </div>
 
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                <div className="badge-print-area" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                   <div className="cr80-badge-preview">
                     <div className="badge-access-band" style={{ background: badgeAccessLevel.color }} />
 
-                    <img src={logo} alt="Logo CONESESS" style={{ width: "50px", height: "50px", borderRadius: "50%", border: "2px solid #D97706", marginTop: "1rem", marginBottom: "0.5rem" }} />
-                    <h4 style={{ margin: 0, fontSize: "0.9rem", letterSpacing: "0.05em", color: "var(--admin-text-main)" }}>CONESESS SÉNÉGAL</h4>
+                    <img className="badge-logo" src={logo} alt="Logo CONESESS" style={{ width: "50px", height: "50px", borderRadius: "50%", border: "2px solid #D97706", marginTop: "1rem", marginBottom: "0.5rem" }} />
+                    <h4 className="badge-org-title" style={{ margin: 0, fontSize: "0.9rem", letterSpacing: "0.05em", color: "var(--admin-text-main)" }}>CONESESS SÉNÉGAL</h4>
 
                     <div
+                      className="badge-avatar"
                       style={{
                         margin: "1.5rem 0 1rem 0",
                         width: "90px",
@@ -1452,10 +1453,11 @@ export default function AdminPage() {
                       <i className="fas fa-user" style={{ fontSize: "3rem", color: "#64748B" }} />
                     </div>
 
-                    <h3 style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem", fontWeight: 800, color: "var(--admin-text-main)" }}>{badgeName || "Nom du Titulaire"}</h3>
-                    <p style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>{badgeOrg || "Organisation / Structure"}</p>
+                    <h3 className="badge-name" style={{ margin: "0 0 0.25rem 0", fontSize: "1.15rem", fontWeight: 800, color: "var(--admin-text-main)" }}>{badgeName || "Nom du Titulaire"}</h3>
+                    <p className="badge-org" style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>{badgeOrg || "Organisation / Structure"}</p>
 
                     <div
+                      className="badge-pill"
                       style={{
                         background: badgeAccessLevel.color,
                         color: "#FFFFFF",
@@ -1471,8 +1473,8 @@ export default function AdminPage() {
                       {badgeAccessLevel.value}
                     </div>
 
-                    <div style={{ background: "#FFFFFF", border: "1px solid var(--admin-border-light)", padding: "0.35rem", borderRadius: "8px" }}>
-                      <img src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=CONESESS-DEMO" alt="QR Code" style={{ width: "70px", height: "70px", display: "block" }} />
+                    <div className="badge-qr-wrap" style={{ background: "#FFFFFF", border: "1px solid var(--admin-border-light)", padding: "0.35rem", borderRadius: "8px" }}>
+                      <img className="badge-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=CONESESS-DEMO" alt="QR Code" style={{ width: "70px", height: "70px", display: "block" }} />
                     </div>
                   </div>
                 </div>

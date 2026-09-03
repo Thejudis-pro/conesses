@@ -22,7 +22,7 @@ export function downloadSubmissionReceipt(options: { formType: string; reference
   doc.setFont("helvetica", "normal")
   doc.setFontSize(10)
   doc.setTextColor(100, 116, 139)
-  doc.text("Conseil National des Entreprises de l'Économie Sociale et Solidaire", marginX, y)
+  doc.text("Confédération Nationale des Entreprises de l'Économie Sociale et Solidaire", marginX, y)
   y += 10
 
   doc.setDrawColor(0, 104, 55)

@@ -107,7 +107,7 @@ export default function CandidaturePage() {
               Comité de Pilotage du CONESESS
             </h1>
             <p style={{ color: "rgba(255, 255, 255, 0.9)", fontSize: "1.05rem", lineHeight: 1.6, margin: 0 }}>
-              Postulez pour constituer l'instance nationale de gouvernance du Conseil National des Entreprises de l’Économie
+              Postulez pour constituer l'instance nationale de gouvernance de la Confédération Nationale des Entreprises de l’Économie
               Sociale et Solidaire.
             </p>
           </div>

@@ -84,7 +84,7 @@ export function SubFooter({ page }: { page: Exclude<Page, "home"> }) {
             </div>
 
             <p style={{ fontSize: "0.875rem", lineHeight: 1.55, color: "rgba(255, 255, 255, 0.92)", marginBottom: "0.85rem" }} className="footer-brand-desc">
-              <strong style={{ color: "#FFFFFF", fontSize: "0.9rem" }}>Conseil National des Entreprises de l’Économie Sociale et Solidaire du Sénégal</strong>
+              <strong style={{ color: "#FFFFFF", fontSize: "0.9rem" }}>Confédération Nationale des Entreprises de l’Économie Sociale et Solidaire du Sénégal</strong>
               <br />
               <span style={{ color: "rgba(255, 255, 255, 0.82)" }}>Cadre national fédérateur des entreprises de l’ESS.</span>
             </p>
@@ -177,7 +177,7 @@ export function SubFooter({ page }: { page: Exclude<Page, "home"> }) {
           }}
         >
           <p style={{ margin: 0 }}>
-            &copy; 2026 <strong>CONESESS</strong> - Conseil National des Entreprises de l'ESS du Sénégal. Tous droits réservés. |{" "}
+            &copy; 2026 <strong>CONESESS</strong> - Confédération Nationale des Entreprises de l'ESS du Sénégal. Tous droits réservés. |{" "}
             <Link to="/admin" style={{ color: "#E9C46A", fontWeight: 600, textDecoration: "underline" }}>
               <i className="fas fa-lock" /> Espace Administration
             </Link>
