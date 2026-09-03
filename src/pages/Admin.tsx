@@ -1435,7 +1435,11 @@ export default function AdminPage() {
                       className="badge-header-band"
                       style={{
                         background: `linear-gradient(135deg, #0A2540 0%, ${badgeAccessLevel.color} 130%)`,
-                        padding: "1.5rem 1rem 3rem 1rem",
+                        height: "150px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
                         textAlign: "center",
                       }}
                     >
@@ -1443,15 +1447,18 @@ export default function AdminPage() {
                         className="badge-logo"
                         src={logo}
                         alt="Logo CONESESS"
-                        style={{ width: "54px", height: "54px", borderRadius: "50%", border: "3px solid #FFFFFF", background: "#FFFFFF", boxShadow: "0 4px 10px rgba(0,0,0,0.25)" }}
+                        style={{ width: "54px", height: "54px", flexShrink: 0, borderRadius: "50%", border: "3px solid #FFFFFF", background: "#FFFFFF", boxShadow: "0 4px 10px rgba(0,0,0,0.25)" }}
                       />
                       <h4 className="badge-org-title" style={{ margin: "0.6rem 0 0 0", fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.07em", color: "#FFFFFF" }}>
                         CONESESS SÉNÉGAL
                       </h4>
                     </div>
 
-                    {/* Avatar overlapping the header/body seam for a layered card look */}
-                    <div style={{ marginTop: "-46px", display: "flex", justifyContent: "center" }}>
+                    {/* Avatar dips slightly below the header's own bottom padding for a
+                        layered look — kept small and the header height fixed above so
+                        it can never collide with the title text regardless of font
+                        rendering differences across browsers. */}
+                    <div style={{ marginTop: "-28px", display: "flex", justifyContent: "center" }}>
                       <div
                         className="badge-avatar"
                         style={{
