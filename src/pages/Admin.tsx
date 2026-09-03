@@ -489,6 +489,7 @@ export default function AdminPage() {
   const [badgeName, setBadgeName] = useState("")
   const [badgeOrg, setBadgeOrg] = useState("")
   const [badgeAccessLevel, setBadgeAccessLevel] = useState(ACCESS_LEVELS[1])
+  const [badgeRef, setBadgeRef] = useState("")
 
   const [checkinCode, setCheckinCode] = useState("")
   const [checkinResult, setCheckinResult] = useState<"valid" | "invalid" | null>(null)
@@ -1370,6 +1371,7 @@ export default function AdminPage() {
                       setBadgeName("")
                       setBadgeOrg("")
                       setBadgeAccessLevel(FREE_BADGE_LEVEL)
+                      setBadgeRef("LIBRE")
                     }}
                     className="action-btn-pill"
                     style={{ width: "100%", justifyContent: "center", marginBottom: "1.25rem" }}
@@ -1386,6 +1388,7 @@ export default function AdminPage() {
                         if (m) {
                           setBadgeName(m.name)
                           setBadgeOrg(m.type)
+                          setBadgeRef(m.ref)
                         }
                       }}
                     >
@@ -1429,98 +1432,103 @@ export default function AdminPage() {
                 </div>
 
                 <div className="badge-print-area" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                  <div className="cr80-badge-preview" style={{ padding: 0, overflow: "hidden", position: "relative" }}>
-                    {/* Gradient header band, tinted with the chosen access level's color */}
-                    <div
-                      className="badge-header-band"
-                      style={{
-                        background: `linear-gradient(135deg, #0A2540 0%, ${badgeAccessLevel.color} 130%)`,
-                        height: "150px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        textAlign: "center",
-                      }}
-                    >
+                  <div className="cr80-badge-preview" style={{ padding: 0, overflow: "hidden" }}>
+                    {/* Header: logo on a plain field, event-style diagonal ribbon on the right */}
+                    <div style={{ position: "relative", width: "100%", boxSizing: "border-box", height: "88px", flexShrink: 0, display: "flex", alignItems: "center", padding: "0 0 0 1.1rem", borderBottom: "1px solid var(--admin-border-light)" }}>
                       <img
-                        className="badge-logo"
                         src={logo}
                         alt="Logo CONESESS"
-                        style={{ width: "54px", height: "54px", flexShrink: 0, borderRadius: "50%", border: "3px solid #FFFFFF", background: "#FFFFFF", boxShadow: "0 4px 10px rgba(0,0,0,0.25)" }}
+                        style={{ width: "56px", height: "56px", borderRadius: "50%", border: "2px solid #E9C46A", background: "#FFFFFF", position: "relative", zIndex: 1 }}
                       />
-                      <h4 className="badge-org-title" style={{ margin: "0.6rem 0 0 0", fontSize: "0.95rem", fontWeight: 800, letterSpacing: "0.07em", color: "#FFFFFF" }}>
-                        CONESESS SÉNÉGAL
-                      </h4>
-                    </div>
-
-                    {/* Avatar dips slightly below the header's own bottom padding for a
-                        layered look — kept small and the header height fixed above so
-                        it can never collide with the title text regardless of font
-                        rendering differences across browsers. */}
-                    <div style={{ marginTop: "-28px", display: "flex", justifyContent: "center" }}>
                       <div
-                        className="badge-avatar"
                         style={{
-                          width: "92px",
-                          height: "92px",
-                          borderRadius: "50%",
-                          border: `4px solid ${badgeAccessLevel.color}`,
-                          background: "#FFFFFF",
-                          boxShadow: "0 6px 16px rgba(0,0,0,0.18)",
+                          position: "absolute",
+                          top: 0,
+                          right: 0,
+                          bottom: 0,
+                          width: "70%",
+                          background: `linear-gradient(120deg, #0A2540 0%, ${badgeAccessLevel.color} 100%)`,
+                          clipPath: "polygon(22% 0, 100% 0, 100% 100%, 0% 100%)",
                           display: "flex",
-                          alignItems: "center",
+                          flexDirection: "column",
+                          alignItems: "flex-end",
                           justifyContent: "center",
+                          padding: "0 1.1rem 0 0",
                         }}
                       >
-                        <i className="fas fa-user" style={{ fontSize: "2.6rem", color: "#94A3B8" }} />
+                        <span style={{ color: "#FFFFFF", fontWeight: 800, fontSize: "1rem", letterSpacing: "0.04em" }}>CONESESS</span>
+                        <span style={{ color: "#E9C46A", fontWeight: 800, fontSize: "0.78rem", letterSpacing: "0.1em" }}>SÉNÉGAL</span>
                       </div>
                     </div>
 
-                    <div style={{ padding: "0.75rem 1.25rem 1.5rem 1.25rem", textAlign: "center" }}>
-                      <h3 className="badge-name" style={{ margin: "0 0 0.15rem 0", fontSize: "1.2rem", fontWeight: 800, color: "#0A2540" }}>
-                        {badgeName || "Nom du Titulaire"}
-                      </h3>
-                      <p className="badge-org" style={{ margin: "0 0 1rem 0", fontSize: "0.8rem", fontWeight: 600, color: "#64748B" }}>
-                        {badgeOrg || "Organisation / Structure"}
-                      </p>
+                    <div style={{ width: "100%", boxSizing: "border-box", padding: "1.1rem 1.25rem 0 1.25rem", textAlign: "center" }}>
+                      <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, letterSpacing: "0.03em", color: "#006837" }}>CONFÉDÉRATION NATIONALE</h3>
+                      <p style={{ margin: "0.15rem 0 0.75rem 0", fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.04em", color: "#0A2540" }}>DES ENTREPRISES DE L'ESS</p>
 
-                      <div
-                        className="badge-pill"
-                        style={{
-                          display: "flex",
-                          width: "fit-content",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "0.4rem",
-                          margin: "0 auto 1.25rem auto",
-                          background: badgeAccessLevel.color,
-                          color: "#FFFFFF",
-                          padding: "0.45rem 1.1rem",
-                          borderRadius: "20px",
-                          fontSize: "0.72rem",
-                          fontWeight: 800,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          boxShadow: `0 4px 10px ${badgeAccessLevel.color}55`,
-                        }}
-                      >
-                        <i className={`fas ${badgeAccessLevel.icon}`} /> {badgeAccessLevel.value}
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem", fontSize: "0.7rem", fontWeight: 700, color: "#64748B", marginBottom: "1rem" }}>
+                        <i className="fas fa-map-marker-alt" style={{ color: badgeAccessLevel.color }} /> DAKAR · SÉNÉGAL
                       </div>
 
-                      <div
-                        className="badge-qr-wrap"
-                        style={{ background: "#FFFFFF", border: `2px solid ${badgeAccessLevel.color}33`, padding: "0.5rem", borderRadius: "12px", width: "fit-content", margin: "0 auto", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
-                      >
-                        <img className="badge-qr" src="https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=CONESESS-DEMO" alt="QR Code" style={{ width: "80px", height: "80px", display: "block" }} />
+                      <div style={{ height: "1px", background: "var(--admin-border-light)", marginBottom: "1rem" }} />
+
+                      <h2 style={{ margin: "0 0 0.2rem 0", fontSize: "1.25rem", fontWeight: 800, color: "#0A2540", textTransform: "uppercase" }}>
+                        {badgeName || "Nom & Prénom"}
+                      </h2>
+                      <p style={{ margin: 0, fontSize: "0.8rem", fontWeight: 600, color: "#64748B" }}>{badgeOrg || "Organisation"}</p>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "0.4rem",
+                        width: "100%",
+                        boxSizing: "border-box",
+                        background: badgeAccessLevel.color,
+                        color: "#FFFFFF",
+                        padding: "0.55rem 1rem",
+                        fontWeight: 800,
+                        fontSize: "0.8rem",
+                        letterSpacing: "0.07em",
+                        textTransform: "uppercase",
+                        margin: "1.1rem 0",
+                        boxShadow: `0 4px 10px ${badgeAccessLevel.color}44`,
+                      }}
+                    >
+                      <i className={`fas ${badgeAccessLevel.icon}`} /> {badgeAccessLevel.value}
+                    </div>
+
+                    <div style={{ width: "100%", boxSizing: "border-box", textAlign: "center" }}>
+                      <div style={{ background: "#FFFFFF", border: "1px solid var(--admin-border-light)", padding: "0.5rem", borderRadius: "10px", width: "fit-content", margin: "0 auto", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}>
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=84x84&data=CONESESS-DEMO" alt="QR Code" style={{ width: "84px", height: "84px", display: "block" }} />
                       </div>
-                      <p style={{ margin: "0.6rem 0 0 0", fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "#94A3B8" }}>
-                        Scanner pour vérifier
+                      <p style={{ margin: "0.5rem 0 0 0", fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.04em", color: "#94A3B8", textTransform: "uppercase" }}>
+                        {badgeRef || "LIBRE"} · Scan à l'entrée
                       </p>
                     </div>
 
-                    {/* Bottom accent bar, matching the header tint */}
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "8px", background: badgeAccessLevel.color }} />
+                    {/* Decorative footer, pushed to the card's bottom edge by the flex
+                        column's auto margin regardless of how tall the content above is */}
+                    <div
+                      style={{
+                        marginTop: "auto",
+                        width: "100%",
+                        boxSizing: "border-box",
+                        background: "#006837",
+                        color: "rgba(255,255,255,0.4)",
+                        padding: "0.6rem 0",
+                        display: "flex",
+                        justifyContent: "space-evenly",
+                        fontSize: "1.1rem",
+                      }}
+                    >
+                      <i className="fas fa-tree" />
+                      <i className="fas fa-seedling" />
+                      <i className="fas fa-leaf" />
+                      <i className="fas fa-seedling" />
+                      <i className="fas fa-tree" />
+                    </div>
                   </div>
                 </div>
               </div>
