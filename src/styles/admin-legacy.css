@@ -447,10 +447,10 @@
 }
 
 /* Badge printing: only the badge itself should reach paper, sized to the
-   standard 150x105mm badge format — not the admin chrome or the creation
-   form, which were previously printing as a leading page. */
+   standard 105x150mm badge format (portrait) — not the admin chrome or
+   the creation form, which were previously printing as a leading page. */
 @page {
-  size: 150mm 105mm;
+  size: 105mm 150mm;
   margin: 0;
 }
 
@@ -474,53 +474,21 @@
   }
   .badge-print-area {
     display: flex !important;
-    width: 150mm !important;
-    height: 105mm !important;
+    width: 105mm !important;
+    height: 150mm !important;
     margin: 0 !important;
     padding: 0 !important;
   }
   .cr80-badge-preview {
-    width: 150mm !important;
-    height: 105mm !important;
+    width: 105mm !important;
+    height: 150mm !important;
     margin: 0 !important;
-    padding: 0.5rem !important;
+    padding: 1rem 0.75rem !important;
     box-shadow: none !important;
     border-radius: 0 !important;
     border: none !important;
     overflow: hidden !important;
     page-break-after: avoid !important;
     page-break-inside: avoid !important;
-  }
-  .badge-logo {
-    width: 34px !important;
-    height: 34px !important;
-    margin-top: 0.3rem !important;
-    margin-bottom: 0.2rem !important;
-  }
-  .badge-org-title {
-    font-size: 0.75rem !important;
-  }
-  .badge-avatar {
-    width: 60px !important;
-    height: 60px !important;
-    margin: 0.6rem 0 0.5rem 0 !important;
-  }
-  .badge-avatar i {
-    font-size: 1.9rem !important;
-  }
-  .badge-name {
-    font-size: 1rem !important;
-  }
-  .badge-org {
-    font-size: 0.7rem !important;
-    margin-bottom: 0.5rem !important;
-  }
-  .badge-pill {
-    padding: 0.25rem 0.75rem !important;
-    margin-bottom: 0.5rem !important;
-  }
-  .badge-qr {
-    width: 55px !important;
-    height: 55px !important;
   }
 }
