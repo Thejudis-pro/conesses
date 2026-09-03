@@ -7,6 +7,7 @@ import CandidaturePage from "@/pages/Candidature"
 import ContactPage from "@/pages/Contact"
 import GouvernancePage from "@/pages/Gouvernance"
 import IndexPage from "@/pages/Index"
+import NotFoundPage from "@/pages/NotFound"
 import PolesActionPage from "@/pages/PolesAction"
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
       <Route path="/candidature" element={<CandidaturePage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/admin" element={<AdminPage />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
