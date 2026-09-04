@@ -18,9 +18,12 @@ export async function fetchBadgeAccessLevels(): Promise<{ data: BadgeAccessLevel
   return { data: data ?? [], error: null }
 }
 
-export async function createBadgeAccessLevel(input: { label: string; access_tier: BadgeAccessTier; color: string; sort_order: number }): Promise<string | null> {
-  const { error } = await supabase.from("badge_access_levels").insert(input)
-  return error?.message ?? null
+export async function createBadgeAccessLevel(
+  input: { label: string; access_tier: BadgeAccessTier; color: string; sort_order: number },
+): Promise<{ id: string | null; error: string | null }> {
+  const { data, error } = await supabase.from("badge_access_levels").insert(input).select("id").single()
+  if (error) return { id: null, error: error.message }
+  return { id: data.id, error: null }
 }
 
 export async function updateBadgeAccessLevel(id: string, input: Partial<{ label: string; access_tier: BadgeAccessTier; color: string }>): Promise<string | null> {

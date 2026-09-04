@@ -501,11 +501,13 @@ export default function AdminPage() {
   const previewLabel = badgeAccessLevel?.label ?? "Aucune catégorie configurée"
   const [badgeRef, setBadgeRef] = useState("")
 
-  // New-category form for the "Niveaux d'Accès Badges" settings tab.
+  // New-category form, shared between the "Niveaux d'Accès Badges" settings
+  // tab and the inline "+ Nouvelle catégorie" shortcut in the Badge Studio.
   const [newLevelLabel, setNewLevelLabel] = useState("")
   const [newLevelTier, setNewLevelTier] = useState<BadgeAccessTier>("total")
   const [newLevelColor, setNewLevelColor] = useState("#006837")
   const [levelActionError, setLevelActionError] = useState<string | null>(null)
+  const [showAddLevelForm, setShowAddLevelForm] = useState(false)
 
   const [checkinCode, setCheckinCode] = useState("")
   const [checkinResult, setCheckinResult] = useState<"valid" | "invalid" | null>(null)
@@ -618,7 +620,7 @@ export default function AdminPage() {
 
   const handleAddBadgeLevel = async () => {
     if (!newLevelLabel.trim()) return setLevelActionError("Le nom de la catégorie est requis.")
-    const err = await createBadgeAccessLevel({
+    const { id, error: err } = await createBadgeAccessLevel({
       label: newLevelLabel.trim(),
       access_tier: newLevelTier,
       color: newLevelColor,
@@ -629,7 +631,9 @@ export default function AdminPage() {
     setNewLevelLabel("")
     setNewLevelTier("total")
     setNewLevelColor("#006837")
-    loadBadgeAccessLevels()
+    await loadBadgeAccessLevels()
+    if (id) setBadgeAccessLevelId(id)
+    setShowAddLevelForm(false)
   }
 
   const handleUpdateBadgeLevel = async (id: string, input: Partial<{ label: string; access_tier: BadgeAccessTier; color: string }>) => {
@@ -1510,6 +1514,59 @@ export default function AdminPage() {
                         </option>
                       ))}
                     </select>
+
+                    {isAdmin && !showAddLevelForm && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAddLevelForm(true)}
+                        style={{ background: "none", border: "none", color: "var(--admin-green)", fontSize: "0.78rem", fontWeight: 700, padding: "0.5rem 0 0 0", cursor: "pointer" }}
+                      >
+                        <i className="fas fa-plus" /> Nouvelle catégorie (ex: AG Constitutive, Participant...)
+                      </button>
+                    )}
+
+                    {isAdmin && showAddLevelForm && (
+                      <div style={{ marginTop: "0.75rem", padding: "0.85rem", border: "1px dashed var(--admin-border-light)", borderRadius: "10px" }}>
+                        {levelActionError && <p style={{ color: "var(--admin-red)", fontSize: "0.78rem", margin: "0 0 0.5rem 0" }}>{levelActionError}</p>}
+                        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", alignItems: "center" }}>
+                          <input
+                            type="text"
+                            className="wizard-form-control"
+                            placeholder="ex: AG Constitutive"
+                            style={{ flex: "1 1 160px" }}
+                            value={newLevelLabel}
+                            onChange={(e) => setNewLevelLabel(e.target.value)}
+                            autoFocus
+                          />
+                          <select className="wizard-form-control" style={{ flex: "0 0 170px" }} value={newLevelTier} onChange={(e) => setNewLevelTier(e.target.value as BadgeAccessTier)}>
+                            <option value="total">{TIER_LABELS.total}</option>
+                            <option value="limite">{TIER_LABELS.limite}</option>
+                          </select>
+                          <input
+                            type="color"
+                            value={newLevelColor}
+                            onChange={(e) => setNewLevelColor(e.target.value)}
+                            title="Couleur du badge"
+                            style={{ width: "38px", height: "38px", padding: 0, border: "1px solid var(--admin-border-light)", borderRadius: "8px", cursor: "pointer" }}
+                          />
+                        </div>
+                        <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.6rem" }}>
+                          <button type="button" onClick={handleAddBadgeLevel} className="action-btn-pill" style={{ fontSize: "0.78rem" }}>
+                            <i className="fas fa-check" /> Créer la catégorie
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAddLevelForm(false)
+                              setLevelActionError(null)
+                            }}
+                            style={{ background: "none", border: "none", color: "var(--admin-text-muted)", fontSize: "0.78rem", cursor: "pointer" }}
+                          >
+                            Annuler
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <button onClick={() => window.print()} className="action-btn-primary" style={{ width: "100%", justifyContent: "center", background: "var(--admin-green)", padding: "0.75rem" }}>
