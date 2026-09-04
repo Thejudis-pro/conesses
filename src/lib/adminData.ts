@@ -77,6 +77,80 @@ export function downloadWebFormsExcel(rows: WebForm[], filename: string) {
   URL.revokeObjectURL(link.href)
 }
 
+const htmlEscape = (value: unknown) =>
+  String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+
+const webFormDetail = (row: WebForm, key: string) => {
+  const v = (row.details as Record<string, unknown> | null)?.[key]
+  return typeof v === "string" || typeof v === "number" ? String(v) : ""
+}
+
+/** A native Word document, built as HTML wrapped for Word (same technique as
+ * the Excel export above, for the same reason: no third-party docx library
+ * needed for a simple write-only export like this). One section per form,
+ * covering every field visible in the "Voir" detail modal. */
+export function downloadWebFormsWord(rows: WebForm[], title: string, filename: string) {
+  const fieldRow = (label: string, value: string) =>
+    value
+      ? `<tr><td style="font-weight:bold;padding:5px 12px;border:1px solid #CBD5E1;width:230px;background:#F8FAFC;">${htmlEscape(label)}</td><td style="padding:5px 12px;border:1px solid #CBD5E1;">${htmlEscape(value)}</td></tr>`
+      : ""
+
+  const sections = rows
+    .map((r, i) => {
+      const fields = [
+        fieldRow("Référence", r.reference),
+        fieldRow("Date de réception", new Date(r.created_at).toLocaleString("fr-FR")),
+        fieldRow("Nom du Contact", r.contact_name ?? ""),
+        fieldRow("Organisation", r.org_name ?? ""),
+        fieldRow("E-mail", r.email ?? ""),
+        fieldRow("Téléphone", r.phone ?? ""),
+        fieldRow("Région", r.region ?? ""),
+        fieldRow("Département / Commune", webFormDetail(r, "commune")),
+        fieldRow("Secteur d'activité", r.sector ?? ""),
+        fieldRow("Forme Juridique", r.legal_form ?? ""),
+        fieldRow("Poste Souhaité", r.role_wanted ?? ""),
+        fieldRow("Nombre de Membres / Salariés", webFormDetail(r, "staff_count")),
+        fieldRow("Statut", r.status),
+      ].join("")
+
+      const presentation = webFormDetail(r, "presentation")
+      const message = r.message ?? ""
+
+      return `
+        <h2 style="color:#0A2540;border-bottom:2px solid #006837;padding-bottom:6px;margin-top:36px;">${i + 1}. ${htmlEscape(r.contact_name || r.org_name || r.reference)}</h2>
+        <table style="border-collapse:collapse;width:100%;margin-bottom:12px;">${fields}</table>
+        ${presentation ? `<p><strong>Présentation de l'organisation :</strong><br/>${htmlEscape(presentation).replace(/\n/g, "<br/>")}</p>` : ""}
+        ${message ? `<p><strong>Message / Motivation :</strong><br/>${htmlEscape(message).replace(/\n/g, "<br/>")}</p>` : ""}
+      `
+    })
+    .join("<div style='page-break-after:always;'></div>")
+
+  const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
+<title>${htmlEscape(title)}</title>
+<style>body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #1A1A1A; } h1 { color: #0A2540; }</style>
+</head>
+<body>
+  <h1>${htmlEscape(title)}</h1>
+  <p>Généré le ${new Date().toLocaleString("fr-FR")} — ${rows.length} dossier(s)</p>
+  ${sections}
+</body>
+</html>`
+
+  const blob = new Blob(["﻿", html], { type: "application/msword;charset=utf-8;" })
+  const link = document.createElement("a")
+  link.href = URL.createObjectURL(blob)
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(link.href)
+}
+
 export interface PendingAdminAccount {
   id: string
   email: string

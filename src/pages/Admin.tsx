@@ -7,6 +7,7 @@ import {
   CANDIDATURE_TYPE,
   deleteWebForm,
   downloadWebFormsExcel,
+  downloadWebFormsWord,
   fetchAllAdminAccounts,
   fetchPendingAdminAccounts,
   fetchWebForms,
@@ -732,6 +733,14 @@ export default function AdminPage() {
     downloadWebFormsExcel(webForms, `CONESESS_Formulaires_Web_${new Date().toISOString().slice(0, 10)}.xls`)
   }
 
+  const handleExportAdhesionsWord = () => {
+    downloadWebFormsWord(adhesionForms, "Registre des Adhésions Membres — CONESESS", `CONESESS_Adhesions_${new Date().toISOString().slice(0, 10)}.doc`)
+  }
+
+  const handleExportSteeringWord = () => {
+    downloadWebFormsWord(steeringForms, "Candidatures Comité de Pilotage — CONESESS", `CONESESS_Candidatures_Comite_Pilotage_${new Date().toISOString().slice(0, 10)}.doc`)
+  }
+
   const switchTab = (id: TabId) => {
     setActiveTab(id)
     setSidebarOpen(false)
@@ -1140,6 +1149,9 @@ export default function AdminPage() {
                     </h3>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Demandes d'adhésion et manifestations d'intérêt reçues via le site web.</p>
                   </div>
+                  <button onClick={handleExportAdhesionsWord} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-navy)" }}>
+                    <i className="fas fa-file-word" /> Exporter Word
+                  </button>
                 </div>
 
                 <div className="admin-table-container">
@@ -1205,6 +1217,9 @@ export default function AdminPage() {
                     </h3>
                     <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>Candidats inscrits pour le Comité de Pilotage du FES-ESS 2026.</p>
                   </div>
+                  <button onClick={handleExportSteeringWord} className="action-btn-primary" style={{ fontSize: "0.8rem", background: "var(--admin-navy)" }}>
+                    <i className="fas fa-file-word" /> Exporter Word
+                  </button>
                 </div>
 
                 <div className="admin-table-container">
