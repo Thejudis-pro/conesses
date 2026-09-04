@@ -17,6 +17,16 @@ import {
   type PendingAdminAccount,
   type StaffRole,
 } from "@/lib/adminData"
+import {
+  createBadgeAccessLevel,
+  deleteBadgeAccessLevel,
+  fetchBadgeAccessLevels,
+  tierIcon,
+  TIER_LABELS,
+  updateBadgeAccessLevel,
+  type BadgeAccessLevel,
+  type BadgeAccessTier,
+} from "@/lib/badgeAccessLevels"
 import { buildGmailComposeUrl } from "@/lib/gmail"
 import { createNewsPost, deleteNewsPost, fetchAllNewsAdmin, setNewsPostPublished, updateNewsPost, uploadNewsImages, type NewsPost } from "@/lib/news"
 import { downloadSubmissionReceipt } from "@/lib/pdfReceipt"
@@ -36,6 +46,7 @@ type TabId =
   | "tab-badges"
   | "tab-checkin"
   | "tab-admins"
+  | "tab-access-levels"
 
 interface Member {
   ref: string
@@ -50,17 +61,6 @@ const REGIONS = [
   "Dakar", "Thiès", "Saint-Louis", "Diourbel", "Fatick", "Kaolack", "Kaffrine", "Louga",
   "Matam", "Kolda", "Kédougou", "Sédhiou", "Tambacounda", "Ziguinchor",
 ]
-
-const ACCESS_LEVELS = [
-  { value: "VIP / Bureau Exécutif", label: "🥇 VIP / Bureau Exécutif (Doré)", color: "#D97706", icon: "fa-crown" },
-  { value: "Membre Titulaire", label: "🌿 Membre Titulaire (Vert Émeraude)", color: "#006837", icon: "fa-leaf" },
-  { value: "Comité de Pilotage", label: "🏛️ Comité de Pilotage (Bleu Roi)", color: "#0A2540", icon: "fa-landmark" },
-  { value: "Invité d'Honneur", label: "🟣 Invité d'Honneur (Violet Impérial)", color: "#7C3AED", icon: "fa-star" },
-  { value: "Presse / Média", label: "🔴 Presse / Média (Rouge Cramoisi)", color: "#DC2626", icon: "fa-camera" },
-  { value: "Badge Gratuit", label: "🎫 Badge Gratuit (Accès Libre)", color: "#64748B", icon: "fa-ticket-alt" },
-]
-
-const FREE_BADGE_LEVEL = ACCESS_LEVELS[ACCESS_LEVELS.length - 1]
 
 interface NavItem {
   id: TabId
@@ -98,7 +98,10 @@ const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   },
   {
     title: "PARAMÈTRES & ACCÈS",
-    items: [{ id: "tab-admins", icon: "fas fa-user-shield", label: "Comptes Administrateurs", superAdminOnly: true }],
+    items: [
+      { id: "tab-admins", icon: "fas fa-user-shield", label: "Comptes Administrateurs", superAdminOnly: true },
+      { id: "tab-access-levels", icon: "fas fa-key", label: "Niveaux d'Accès Badges", superAdminOnly: true },
+    ],
   },
 ]
 
@@ -488,8 +491,20 @@ export default function AdminPage() {
 
   const [badgeName, setBadgeName] = useState("")
   const [badgeOrg, setBadgeOrg] = useState("")
-  const [badgeAccessLevel, setBadgeAccessLevel] = useState(ACCESS_LEVELS[1])
+  const [badgeAccessLevels, setBadgeAccessLevels] = useState<BadgeAccessLevel[]>([])
+  const [badgeLevelsError, setBadgeLevelsError] = useState<string | null>(null)
+  const [badgeAccessLevelId, setBadgeAccessLevelId] = useState<string>("")
+  const badgeAccessLevel = badgeAccessLevels.find((l) => l.id === badgeAccessLevelId) ?? badgeAccessLevels[0] ?? null
+  const previewColor = badgeAccessLevel?.color ?? "#006837"
+  const previewIcon = badgeAccessLevel ? tierIcon(badgeAccessLevel.access_tier) : "fa-id-badge"
+  const previewLabel = badgeAccessLevel?.label ?? "Aucune catégorie configurée"
   const [badgeRef, setBadgeRef] = useState("")
+
+  // New-category form for the "Niveaux d'Accès Badges" settings tab.
+  const [newLevelLabel, setNewLevelLabel] = useState("")
+  const [newLevelTier, setNewLevelTier] = useState<BadgeAccessTier>("total")
+  const [newLevelColor, setNewLevelColor] = useState("#006837")
+  const [levelActionError, setLevelActionError] = useState<string | null>(null)
 
   const [checkinCode, setCheckinCode] = useState("")
   const [checkinResult, setCheckinResult] = useState<"valid" | "invalid" | null>(null)
@@ -547,6 +562,16 @@ export default function AdminPage() {
     setNewsPosts(data)
   }
 
+  const loadBadgeAccessLevels = async () => {
+    const { data, error } = await fetchBadgeAccessLevels()
+    if (error) {
+      setBadgeLevelsError(error)
+      return
+    }
+    setBadgeLevelsError(null)
+    setBadgeAccessLevels(data)
+  }
+
   useEffect(() => {
     if (session && isAdmin) {
       loadWebForms()
@@ -556,7 +581,12 @@ export default function AdminPage() {
       loadPendingAccounts()
       loadAllAdmins()
     }
-  }, [session, isAdmin, isSuperAdmin])
+    // Badge studio is also reachable by checkin-only agents, who need the
+    // category list to hand out free/comp badges on event day.
+    if (session && (isAdmin || isCheckinAgent)) {
+      loadBadgeAccessLevels()
+    }
+  }, [session, isAdmin, isSuperAdmin, isCheckinAgent])
 
   // Checkin-only agents have nothing to see on the dashboard — land them
   // straight on the badge studio instead.
@@ -583,6 +613,36 @@ export default function AdminPage() {
     if (err) return showToast(`Erreur : ${err}`)
     showToast(`Rôle retiré à ${account.email}.`)
     loadAllAdmins()
+  }
+
+  const handleAddBadgeLevel = async () => {
+    if (!newLevelLabel.trim()) return setLevelActionError("Le nom de la catégorie est requis.")
+    const err = await createBadgeAccessLevel({
+      label: newLevelLabel.trim(),
+      access_tier: newLevelTier,
+      color: newLevelColor,
+      sort_order: badgeAccessLevels.length,
+    })
+    if (err) return setLevelActionError(err)
+    setLevelActionError(null)
+    setNewLevelLabel("")
+    setNewLevelTier("total")
+    setNewLevelColor("#006837")
+    loadBadgeAccessLevels()
+  }
+
+  const handleUpdateBadgeLevel = async (id: string, input: Partial<{ label: string; access_tier: BadgeAccessTier; color: string }>) => {
+    const err = await updateBadgeAccessLevel(id, input)
+    if (err) return showToast(`Erreur : ${err}`)
+    loadBadgeAccessLevels()
+  }
+
+  const handleDeleteBadgeLevel = async (level: BadgeAccessLevel) => {
+    if (!window.confirm(`Supprimer la catégorie « ${level.label} » ?`)) return
+    const err = await deleteBadgeAccessLevel(level.id)
+    if (err) return showToast(`Erreur : ${err}`)
+    showToast(`Catégorie « ${level.label} » supprimée.`)
+    loadBadgeAccessLevels()
   }
 
   const openCreatePost = () => {
@@ -1365,16 +1425,25 @@ export default function AdminPage() {
                     <i className="fas fa-id-badge" style={{ color: "var(--admin-green)" }} /> Confection de Badge CR80
                   </h3>
 
+                  {badgeLevelsError && (
+                    <div style={{ background: "#FEF2F2", border: "1px solid #FCA5A5", color: "#991B1B", padding: "0.75rem 1rem", borderRadius: "8px", fontSize: "0.8rem", marginBottom: "1rem" }}>
+                      Catégories de badge indisponibles : {badgeLevelsError}
+                      {badgeLevelsError.toLowerCase().includes("does not exist") && " — la migration badge_access_levels doit être exécutée."}
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => {
                       setBadgeName("")
                       setBadgeOrg("")
-                      setBadgeAccessLevel(FREE_BADGE_LEVEL)
+                      const free = badgeAccessLevels.find((l) => l.label.toLowerCase().includes("gratuit")) ?? badgeAccessLevels[badgeAccessLevels.length - 1]
+                      if (free) setBadgeAccessLevelId(free.id)
                       setBadgeRef("LIBRE")
                     }}
                     className="action-btn-pill"
                     style={{ width: "100%", justifyContent: "center", marginBottom: "1.25rem" }}
+                    disabled={badgeAccessLevels.length === 0}
                   >
                     <i className="fas fa-ticket-alt" /> Créer un Badge Gratuit
                   </button>
@@ -1415,12 +1484,14 @@ export default function AdminPage() {
                     <label style={{ fontWeight: 600, fontSize: "0.825rem" }}>Niveau d'Accès & Badge *</label>
                     <select
                       className="wizard-form-control"
-                      value={badgeAccessLevel.value}
-                      onChange={(e) => setBadgeAccessLevel(ACCESS_LEVELS.find((l) => l.value === e.target.value) ?? ACCESS_LEVELS[1])}
+                      value={badgeAccessLevel?.id ?? ""}
+                      onChange={(e) => setBadgeAccessLevelId(e.target.value)}
+                      disabled={badgeAccessLevels.length === 0}
                     >
-                      {ACCESS_LEVELS.map((l) => (
-                        <option key={l.value} value={l.value}>
-                          {l.label}
+                      {badgeAccessLevels.length === 0 && <option value="">-- Aucune catégorie configurée --</option>}
+                      {badgeAccessLevels.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.label} ({TIER_LABELS[l.access_tier as BadgeAccessTier]})
                         </option>
                       ))}
                     </select>
@@ -1447,7 +1518,7 @@ export default function AdminPage() {
                           right: 0,
                           bottom: 0,
                           width: "70%",
-                          background: `linear-gradient(120deg, #0A2540 0%, ${badgeAccessLevel.color} 100%)`,
+                          background: `linear-gradient(120deg, #0A2540 0%, ${previewColor} 100%)`,
                           clipPath: "polygon(22% 0, 100% 0, 100% 100%, 0% 100%)",
                           display: "flex",
                           flexDirection: "column",
@@ -1466,7 +1537,7 @@ export default function AdminPage() {
                       <p style={{ margin: "0.15rem 0 0.75rem 0", fontSize: "0.72rem", fontWeight: 800, letterSpacing: "0.04em", color: "#0A2540" }}>DES ENTREPRISES DE L'ESS</p>
 
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.35rem", fontSize: "0.7rem", fontWeight: 700, color: "#64748B", marginBottom: "1rem" }}>
-                        <i className="fas fa-map-marker-alt" style={{ color: badgeAccessLevel.color }} /> DAKAR · SÉNÉGAL
+                        <i className="fas fa-map-marker-alt" style={{ color: previewColor }} /> DAKAR · SÉNÉGAL
                       </div>
 
                       <div style={{ height: "1px", background: "var(--admin-border-light)", marginBottom: "1rem" }} />
@@ -1485,7 +1556,7 @@ export default function AdminPage() {
                         gap: "0.4rem",
                         width: "100%",
                         boxSizing: "border-box",
-                        background: badgeAccessLevel.color,
+                        background: previewColor,
                         color: "#FFFFFF",
                         padding: "0.55rem 1rem",
                         fontWeight: 800,
@@ -1493,10 +1564,10 @@ export default function AdminPage() {
                         letterSpacing: "0.07em",
                         textTransform: "uppercase",
                         margin: "1.1rem 0",
-                        boxShadow: `0 4px 10px ${badgeAccessLevel.color}44`,
+                        boxShadow: `0 4px 10px ${previewColor}44`,
                       }}
                     >
-                      <i className={`fas ${badgeAccessLevel.icon}`} /> {badgeAccessLevel.value}
+                      <i className={`fas ${previewIcon}`} /> {previewLabel}
                     </div>
 
                     <div style={{ width: "100%", boxSizing: "border-box", textAlign: "center" }}>
@@ -1762,6 +1833,117 @@ export default function AdminPage() {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* TAB: NIVEAUX D'ACCÈS BADGES */}
+          {activeTab === "tab-access-levels" && (
+            <section className="admin-tab-content">
+              <div className="admin-table-card">
+                <div className="table-header-toolbar">
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "1.15rem", color: "var(--admin-text-main)" }}>
+                      <i className="fas fa-key" style={{ color: "var(--admin-green)" }} /> Niveaux d'Accès Badges
+                    </h3>
+                    <p style={{ margin: "0.2rem 0 0 0", fontSize: "0.8rem", color: "var(--admin-text-muted)" }}>
+                      Chaque catégorie de badge a un niveau d'accès affiché sur le badge : Accès Total ou Accès Limité.
+                    </p>
+                  </div>
+                  <button onClick={loadBadgeAccessLevels} className="action-btn-pill" style={{ fontSize: "0.8rem" }}>
+                    <i className="fas fa-sync-alt" /> Actualiser
+                  </button>
+                </div>
+
+                {badgeLevelsError && (
+                  <div style={{ background: "var(--admin-soft-red)", border: "1px solid var(--admin-red)", color: "var(--admin-red)", padding: "1rem 1.25rem", borderRadius: "12px", marginBottom: "1.25rem" }}>
+                    Erreur de chargement : {badgeLevelsError}
+                    {badgeLevelsError.toLowerCase().includes("does not exist") && " — exécutez la migration badge_access_levels dans Supabase."}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1.5rem" }}>
+                  {badgeAccessLevels.length === 0 && !badgeLevelsError && (
+                    <p style={{ color: "var(--admin-text-muted)", fontSize: "0.85rem" }}>Aucune catégorie pour le moment.</p>
+                  )}
+                  {badgeAccessLevels.map((level) => (
+                    <div
+                      key={level.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.75rem",
+                        flexWrap: "wrap",
+                        border: "1px solid var(--admin-border-light)",
+                        borderRadius: "14px",
+                        padding: "0.75rem 1rem",
+                      }}
+                    >
+                      <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: level.color, flexShrink: 0 }} />
+                      <input
+                        type="text"
+                        className="wizard-form-control"
+                        defaultValue={level.label}
+                        style={{ flex: "1 1 200px" }}
+                        onBlur={(e) => {
+                          if (e.target.value.trim() && e.target.value !== level.label) handleUpdateBadgeLevel(level.id, { label: e.target.value.trim() })
+                        }}
+                      />
+                      <select
+                        className="wizard-form-control"
+                        style={{ flex: "0 0 190px" }}
+                        value={level.access_tier}
+                        onChange={(e) => handleUpdateBadgeLevel(level.id, { access_tier: e.target.value as BadgeAccessTier })}
+                      >
+                        <option value="total">{TIER_LABELS.total}</option>
+                        <option value="limite">{TIER_LABELS.limite}</option>
+                      </select>
+                      <input
+                        type="color"
+                        value={level.color}
+                        onChange={(e) => handleUpdateBadgeLevel(level.id, { color: e.target.value })}
+                        title="Couleur du badge"
+                        style={{ width: "38px", height: "38px", padding: 0, border: "1px solid var(--admin-border-light)", borderRadius: "8px", cursor: "pointer" }}
+                      />
+                      <button onClick={() => handleDeleteBadgeLevel(level)} className="btn-act btn-act-delete" title="Supprimer cette catégorie">
+                        <i className="fas fa-trash-alt" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ height: "1px", background: "var(--admin-border-light)", margin: "0 0 1.25rem 0" }} />
+
+                {levelActionError && (
+                  <div style={{ background: "var(--admin-soft-red)", border: "1px solid var(--admin-red)", color: "var(--admin-red)", padding: "0.75rem 1rem", borderRadius: "10px", marginBottom: "1rem", fontSize: "0.85rem" }}>
+                    {levelActionError}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+                  <input
+                    type="text"
+                    className="wizard-form-control"
+                    placeholder="Nom de la nouvelle catégorie (ex: Partenaire)"
+                    style={{ flex: "1 1 200px" }}
+                    value={newLevelLabel}
+                    onChange={(e) => setNewLevelLabel(e.target.value)}
+                  />
+                  <select className="wizard-form-control" style={{ flex: "0 0 190px" }} value={newLevelTier} onChange={(e) => setNewLevelTier(e.target.value as BadgeAccessTier)}>
+                    <option value="total">{TIER_LABELS.total}</option>
+                    <option value="limite">{TIER_LABELS.limite}</option>
+                  </select>
+                  <input
+                    type="color"
+                    value={newLevelColor}
+                    onChange={(e) => setNewLevelColor(e.target.value)}
+                    title="Couleur du badge"
+                    style={{ width: "38px", height: "38px", padding: 0, border: "1px solid var(--admin-border-light)", borderRadius: "8px", cursor: "pointer" }}
+                  />
+                  <button onClick={handleAddBadgeLevel} className="action-btn-pill">
+                    <i className="fas fa-plus" /> Ajouter une catégorie
+                  </button>
                 </div>
               </div>
             </section>

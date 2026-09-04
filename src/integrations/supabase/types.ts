@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      badge_access_levels: {
+        Row: {
+          id: string
+          label: string
+          access_tier: string
+          color: string
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          label: string
+          access_tier: string
+          color?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          access_tier?: string
+          color?: string
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
       news_posts: {
         Row: {
           content: string
