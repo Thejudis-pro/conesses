@@ -84,7 +84,7 @@ export default function ActualiteDetailPage() {
                       style={{ boxShadow: "var(--shadow-md)" }}
                     />
                     {post.image_urls.length > 1 && (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", marginTop: "0.75rem" }}>
+                      <div className="news-detail-grid">
                         {post.image_urls.slice(1).map((url, i) => (
                           <NewsImage key={url} src={url} alt={`${post.title} ${i + 2}`} height="240px" radius="var(--radius-md)" />
                         ))}

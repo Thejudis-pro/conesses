@@ -121,6 +121,21 @@ section.section {
   box-shadow: var(--shadow-md);
 }
 
+/* Secondary photos on the news detail page: 2 columns on phones so
+   portrait pictures stay readable, wider thumbnails on larger screens. */
+.news-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .news-detail-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
 /* Badge Utility */
 .badge {
   display: inline-flex;
