@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { PublicLayout } from "@/components/layout/PublicLayout"
 import { NewsImage } from "@/components/news/NewsImage"
+import { Lightbox } from "@/components/news/Lightbox"
 import { fetchPublishedNewsById, type NewsPost } from "@/lib/news"
 
 export default function ActualiteDetailPage() {
@@ -9,6 +10,7 @@ export default function ActualiteDetailPage() {
   const [post, setPost] = useState<NewsPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   useEffect(() => {
     if (!id) return
