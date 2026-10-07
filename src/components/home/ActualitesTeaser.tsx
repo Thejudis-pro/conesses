@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import { NewsImage } from "@/components/news/NewsImage"
 import { fetchPublishedNews, newsExcerpt, type NewsPost } from "@/lib/news"
 
 export function ActualitesTeaser() {
@@ -16,7 +17,7 @@ export function ActualitesTeaser() {
   if (loading) return null
 
   return (
-    <section className="section" style={{ background: "#E6EDF5", padding: "3rem 0" }}>
+    <section className="section" style={{ background: "#D3E0EE", padding: "3rem 0" }}>
       <div className="container">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem", marginBottom: "1.75rem" }}>
           <div>
@@ -55,7 +56,7 @@ export function ActualitesTeaser() {
                 style={{
                   textDecoration: "none",
                   background: "#FFFFFF",
-                  border: "1px solid #CBD6E2",
+                  border: "1px solid #B8C9DB",
                   borderRadius: "var(--radius-md)",
                   overflow: "hidden",
                   boxShadow: "0 2px 8px rgba(10, 37, 64, 0.1)",
@@ -65,7 +66,7 @@ export function ActualitesTeaser() {
                 }}
               >
                 {post.image_urls[0] && (
-                  <img src={post.image_urls[0]} alt={post.title} style={{ width: "100%", height: "150px", objectFit: "cover" }} />
+                  <NewsImage src={post.image_urls[0]} alt={post.title} height="170px" />
                 )}
                 <div style={{ padding: "1.25rem" }}>
                   <small style={{ color: "var(--text-muted)", fontSize: "0.75rem" }}>

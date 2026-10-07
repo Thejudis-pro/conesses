@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { PublicLayout } from "@/components/layout/PublicLayout"
+import { NewsImage } from "@/components/news/NewsImage"
 import { fetchPublishedNews, newsExcerpt, type NewsPost } from "@/lib/news"
 
 export default function ActualitesPage() {
@@ -47,7 +48,7 @@ export default function ActualitesPage() {
         </div>
       </section>
 
-      <section className="section" style={{ background: "#E6EDF5", padding: "3rem 0 3.5rem 0" }}>
+      <section className="section" style={{ background: "#D3E0EE", padding: "3rem 0 3.5rem 0" }}>
         <div className="container" style={{ maxWidth: "1100px" }}>
           {loading ? (
             <p style={{ textAlign: "center", color: "var(--text-muted)" }}>Chargement...</p>
@@ -78,7 +79,7 @@ export default function ActualitesPage() {
                   style={{
                     textDecoration: "none",
                     background: "#FFFFFF",
-                    border: "1px solid #CBD6E2",
+                    border: "1px solid #B8C9DB",
                     borderRadius: "var(--radius-lg)",
                     overflow: "hidden",
                     boxShadow: "0 2px 8px rgba(10, 37, 64, 0.1)",
@@ -90,7 +91,7 @@ export default function ActualitesPage() {
                 >
                   <div style={{ width: "100%", height: "190px", background: "var(--bg-alt)", overflow: "hidden" }}>
                     {post.image_urls[0] ? (
-                      <img src={post.image_urls[0]} alt={post.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <NewsImage src={post.image_urls[0]} alt={post.title} height="100%" />
                     ) : (
                       <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                         <i className="fas fa-newspaper" style={{ fontSize: "2rem", color: "var(--border-light)" }} />

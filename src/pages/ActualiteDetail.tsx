@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { PublicLayout } from "@/components/layout/PublicLayout"
+import { NewsImage } from "@/components/news/NewsImage"
 import { fetchPublishedNewsById, type NewsPost } from "@/lib/news"
 
 export default function ActualiteDetailPage() {
@@ -27,9 +28,11 @@ export default function ActualiteDetailPage() {
       >
         <div className="container">
           <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto" }}>
-            <Link to="/actualites" style={{ color: "#E9C46A", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.4rem", marginBottom: "1rem" }}>
-              <i className="fas fa-arrow-left" /> Retour aux actualités
-            </Link>
+            <div style={{ marginBottom: "1.5rem" }}>
+              <Link to="/actualites" style={{ color: "#E9C46A", fontSize: "0.85rem", fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+                <i className="fas fa-arrow-left" /> Retour aux actualités
+              </Link>
+            </div>
             {!loading && post && (
               <>
                 <div
@@ -73,20 +76,17 @@ export default function ActualiteDetailPage() {
               <>
                 {post.image_urls.length > 0 && (
                   <div style={{ marginBottom: "2rem" }}>
-                    <img
+                    <NewsImage
                       src={post.image_urls[0]}
                       alt={post.title}
-                      style={{ width: "100%", maxHeight: "480px", objectFit: "cover", borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-md)" }}
+                      maxHeight="560px"
+                      radius="var(--radius-lg)"
+                      style={{ boxShadow: "var(--shadow-md)" }}
                     />
                     {post.image_urls.length > 1 && (
-                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: "0.6rem", marginTop: "0.6rem" }}>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "0.75rem", marginTop: "0.75rem" }}>
                         {post.image_urls.slice(1).map((url, i) => (
-                          <img
-                            key={url}
-                            src={url}
-                            alt={`${post.title} ${i + 2}`}
-                            style={{ width: "100%", height: "140px", objectFit: "cover", borderRadius: "var(--radius-md)" }}
-                          />
+                          <NewsImage key={url} src={url} alt={`${post.title} ${i + 2}`} height="200px" radius="var(--radius-md)" />
                         ))}
                       </div>
                     )}
