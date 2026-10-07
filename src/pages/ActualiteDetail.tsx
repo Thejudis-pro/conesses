@@ -84,11 +84,19 @@ export default function ActualiteDetailPage() {
                       maxHeight="560px"
                       radius="var(--radius-lg)"
                       style={{ boxShadow: "var(--shadow-md)" }}
+                      onClick={() => setLightboxIndex(0)}
                     />
                     {post.image_urls.length > 1 && (
                       <div className="news-detail-grid">
                         {post.image_urls.slice(1).map((url, i) => (
-                          <NewsImage key={url} src={url} alt={`${post.title} ${i + 2}`} height="240px" radius="var(--radius-md)" />
+                          <NewsImage
+                            key={url}
+                            src={url}
+                            alt={`${post.title} ${i + 2}`}
+                            height="240px"
+                            radius="var(--radius-md)"
+                            onClick={() => setLightboxIndex(i + 1)}
+                          />
                         ))}
                       </div>
                     )}
@@ -123,6 +131,13 @@ export default function ActualiteDetailPage() {
           )}
         </div>
       </section>
+      <Lightbox
+        images={post?.image_urls ?? []}
+        alt={post?.title ?? "Photo"}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onNavigate={setLightboxIndex}
+      />
     </PublicLayout>
   )
 }
