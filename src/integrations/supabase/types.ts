@@ -16,28 +16,28 @@ export type Database = {
     Tables: {
       badge_access_levels: {
         Row: {
-          id: string
-          label: string
           access_tier: string
           color: string
-          sort_order: number
           created_at: string
+          id: string
+          label: string
+          sort_order: number
         }
         Insert: {
-          id?: string
-          label: string
           access_tier: string
           color?: string
-          sort_order?: number
           created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
         }
         Update: {
-          id?: string
-          label?: string
           access_tier?: string
           color?: string
-          sort_order?: number
           created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -151,12 +151,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      grant_role: {
+        Args: {
+          new_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      list_all_admin_accounts: {
+        Args: never
+        Returns: {
+          email: string
+          granted_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
       }
       list_pending_admin_accounts: {
         Args: never
@@ -167,26 +183,10 @@ export type Database = {
           id: string
         }[]
       }
-      list_all_admin_accounts: {
-        Args: never
-        Returns: {
-          id: string
-          email: string
-          role: Database["public"]["Enums"]["app_role"]
-          granted_at: string
-        }[]
-      }
-      grant_role: {
-        Args: {
-          target_user_id: string
-          new_role: Database["public"]["Enums"]["app_role"]
-        }
-        Returns: undefined
-      }
       revoke_role: {
         Args: {
-          target_user_id: string
           target_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
         }
         Returns: undefined
       }
@@ -208,12 +208,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -237,11 +237,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -262,11 +262,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -287,11 +287,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -304,11 +304,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
