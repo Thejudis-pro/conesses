@@ -10,8 +10,8 @@ interface NewsImageProps {
   style?: CSSProperties
 }
 
-/** Landscape photos at or above this width/height ratio fill the box; anything squarer is shown whole. */
-const COVER_MIN_RATIO = 1.45
+/** Photos at or above this width/height ratio fill the box; only square or portrait images (logos, posters) are shown whole. */
+const COVER_MIN_RATIO = 1.2
 
 /**
  * Smart crop: wide photos fill the frame, while logos, posters and portrait pictures
