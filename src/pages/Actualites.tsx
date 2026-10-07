@@ -47,7 +47,7 @@ export default function ActualitesPage() {
         </div>
       </section>
 
-      <section className="section" style={{ background: "var(--bg-surface)", padding: "3rem 0 3.5rem 0" }}>
+      <section className="section" style={{ background: "#E6EDF5", padding: "3rem 0 3.5rem 0" }}>
         <div className="container" style={{ maxWidth: "1100px" }}>
           {loading ? (
             <p style={{ textAlign: "center", color: "var(--text-muted)" }}>Chargement...</p>
@@ -78,10 +78,10 @@ export default function ActualitesPage() {
                   style={{
                     textDecoration: "none",
                     background: "#FFFFFF",
-                    border: "1px solid var(--border-light)",
+                    border: "1px solid #CBD6E2",
                     borderRadius: "var(--radius-lg)",
                     overflow: "hidden",
-                    boxShadow: "var(--shadow-sm)",
+                    boxShadow: "0 2px 8px rgba(10, 37, 64, 0.1)",
                     display: "flex",
                     flexDirection: "column",
                     transition: "var(--transition)",

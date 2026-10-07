@@ -92,7 +92,30 @@ export default function ActualiteDetailPage() {
                     )}
                   </div>
                 )}
-                <p style={{ color: "var(--text-body)", fontSize: "1rem", lineHeight: 1.75, margin: 0, whiteSpace: "pre-wrap" }}>{post.content}</p>
+                <article style={{ padding: "0 0.5rem" }}>
+                  {post.content
+                    .split(/\n\s*\n|\n/)
+                    .map((paragraph) => paragraph.trim())
+                    .filter(Boolean)
+                    .map((paragraph, i, all) => (
+                      <p
+                        key={i}
+                        lang="fr"
+                        style={{
+                          color: "var(--text-body)",
+                          fontSize: "1.05rem",
+                          lineHeight: 1.9,
+                          letterSpacing: "0.01em",
+                          textAlign: "justify",
+                          hyphens: "auto",
+                          overflowWrap: "break-word",
+                          margin: i === all.length - 1 ? 0 : "0 0 1.5rem 0",
+                        }}
+                      >
+                        {paragraph}
+                      </p>
+                    ))}
+                </article>
               </>
             )
           )}
