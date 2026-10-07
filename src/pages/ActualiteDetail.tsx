@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Link, useParams } from "react-router-dom"
 import { PublicLayout } from "@/components/layout/PublicLayout"
 import { NewsImage } from "@/components/news/NewsImage"
+import { Lightbox } from "@/components/news/Lightbox"
 import { fetchPublishedNewsById, type NewsPost } from "@/lib/news"
 
 export default function ActualiteDetailPage() {
@@ -9,6 +10,7 @@ export default function ActualiteDetailPage() {
   const [post, setPost] = useState<NewsPost | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -82,11 +84,19 @@ export default function ActualiteDetailPage() {
                       maxHeight="560px"
                       radius="var(--radius-lg)"
                       style={{ boxShadow: "var(--shadow-md)" }}
+                      onClick={() => setLightboxIndex(0)}
                     />
                     {post.image_urls.length > 1 && (
                       <div className="news-detail-grid">
                         {post.image_urls.slice(1).map((url, i) => (
-                          <NewsImage key={url} src={url} alt={`${post.title} ${i + 2}`} height="240px" radius="var(--radius-md)" />
+                          <NewsImage
+                            key={url}
+                            src={url}
+                            alt={`${post.title} ${i + 2}`}
+                            height="240px"
+                            radius="var(--radius-md)"
+                            onClick={() => setLightboxIndex(i + 1)}
+                          />
                         ))}
                       </div>
                     )}
@@ -121,6 +131,13 @@ export default function ActualiteDetailPage() {
           )}
         </div>
       </section>
+      <Lightbox
+        images={post?.image_urls ?? []}
+        alt={post?.title ?? "Photo"}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onNavigate={setLightboxIndex}
+      />
     </PublicLayout>
   )
 }
