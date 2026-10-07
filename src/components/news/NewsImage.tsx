@@ -8,6 +8,8 @@ interface NewsImageProps {
   maxHeight?: string
   radius?: string
   style?: CSSProperties
+  /** When provided, the photo becomes a button (zoom cursor) that opens the full view. */
+  onClick?: () => void
 }
 
 /** Photos at or above this width/height ratio fill the box; only square or portrait images (logos, posters) are shown whole. */
